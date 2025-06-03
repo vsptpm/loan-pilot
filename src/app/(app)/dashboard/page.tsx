@@ -4,7 +4,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { PlusCircle, TrendingUp, ListChecks, Loader2, PieChart as PieChartIcon, BarChart2, LineChart as LineChartIcon, Info } from 'lucide-react';
+import { PlusCircle, Info, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, ShieldCheck, Percent, CheckCircle2, AlertCircle, HelpCircle as InfoIconLucide } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -14,8 +14,9 @@ import {
 } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { useEffect, useState, useMemo } from 'react';
-// import Image from 'next/image'; // No longer using next/image for this specific part
 import type { Loan, AmortizationEntry } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
@@ -28,29 +29,6 @@ import {
 } from '@/lib/loanUtils';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { parseISO, addMonths, differenceInMonths, format, getYear, getMonth } from 'date-fns';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart"
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend as RechartsLegend,
-  LabelList
-} from 'recharts';
 import { FinancialPlanningIllustration } from '@/components/illustrations/FinancialPlanningIllustration';
 
 
@@ -67,14 +45,30 @@ interface DashboardLoanSummary {
   schedule: AmortizationEntry[];
 }
 
-const CHART_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  '#2A9D8F', '#E9C46A', '#F4A261', '#E76F51', '#A8DADC', '#457B9D'
-];
+const CreditScoreGauge = ({ score }: { score: number }) => (
+  <div className="relative w-36 h-18 mx-auto my-2">
+    <svg viewBox="0 0 100 50" className="w-full h-full transform ">
+      <path
+        d="M 10 48 A 38 38 0 0 1 90 48"
+        fill="none"
+        stroke="hsl(var(--muted))"
+        strokeWidth="8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M 10 48 A 38 38 0 0 1 90 48"
+        fill="none"
+        stroke="hsl(var(--primary))"
+        strokeWidth="8"
+        strokeDasharray={`${Math.max(0, Math.min(100, (score - 300) / (850 - 300) * 100)) * 1.1938} 119.38`} // Adjusted circumference for r=38 approx 119.38
+        strokeLinecap="round"
+      />
+    </svg>
+    <div className="absolute inset-0 flex flex-col items-center justify-end pb-1">
+      <span className="text-2xl font-bold text-primary">{score}</span>
+    </div>
+  </div>
+);
 
 
 export default function DashboardPage() {
@@ -112,15 +106,12 @@ export default function DashboardPage() {
     return loans.map(loan => {
       const monthlyEMI = calculateEMI(loan.principalAmount, loan.interestRate, loan.durationMonths);
       const initialPaidEMIs = getInitialPaidEMIsCount(loan.amountAlreadyPaid, monthlyEMI);
-      // IMPORTANT: Dashboard summaries DO NOT fetch/use recordedPrepayments for individual loans here for performance.
-      // The schedule generated here is based on original terms + amountAlreadyPaid only.
       const schedule = generateAmortizationSchedule(
         loan.principalAmount,
         loan.interestRate,
         loan.durationMonths,
         loan.startDate,
         initialPaidEMIs
-        // No recordedPrepayments passed here
       );
       const status = getLoanStatus(loan, schedule);
       
@@ -139,118 +130,33 @@ export default function DashboardPage() {
     });
   }, [loans]);
 
-  const overallStats = useMemo(() => {
+  const dashboardStats = useMemo(() => {
     if (loanSummaries.length === 0) {
       return {
-        totalOutstanding: 0,
-        overallPercentagePaid: 0,
-        nextActionDueDate: null,
-        nextActionLoanName: null,
+        totalBorrowed: 0,
+        totalRepaidSoFar: 0,
+        averageInterestRate: 0,
       };
     }
 
-    const totalOriginalPrincipal = loanSummaries.reduce((sum, s) => sum + s.originalLoan.principalAmount, 0);
-    const totalOutstanding = loanSummaries.reduce((sum, s) => sum + s.status.currentBalance, 0); // Based on simplified summaries
-    const totalPaid = totalOriginalPrincipal - totalOutstanding;
-    const overallPercentagePaid = totalOriginalPrincipal > 0 ? (totalPaid / totalOriginalPrincipal) * 100 : 0;
-
-    let earliestDueDate: Date | null = null;
-    let nextActionLoanName: string | null = null;
-
-    loanSummaries.forEach(summary => {
-      if (summary.nextDueDate) {
-        const dueDate = parseISO(summary.nextDueDate);
-        if (!earliestDueDate || dueDate < earliestDueDate) {
-          earliestDueDate = dueDate;
-          nextActionLoanName = summary.name;
-        }
-      }
-    });
-
+    const totalBorrowed = loanSummaries.reduce((sum, s) => sum + s.originalLoan.principalAmount, 0);
+    const totalRepaidSoFar = loanSummaries.reduce((sum,s) => sum + s.status.totalPrincipalPaid, 0);
+    const totalInterestRateSum = loanSummaries.reduce((sum, s) => sum + s.interestRate, 0);
+    const averageInterestRate = loanSummaries.length > 0 ? totalInterestRateSum / loanSummaries.length : 0;
+    
     return {
-      totalOutstanding,
-      overallPercentagePaid: parseFloat(overallPercentagePaid.toFixed(2)),
-      nextActionDueDate: earliestDueDate ? formatDate(earliestDueDate) : null,
-      nextActionLoanName: nextActionLoanName,
+      totalBorrowed,
+      totalRepaidSoFar,
+      averageInterestRate: parseFloat(averageInterestRate.toFixed(2)),
     };
   }, [loanSummaries]);
 
-  const loanBalanceOverTimeData = useMemo(() => {
-    // This chart uses simplified schedules from loanSummaries, so it won't reflect recorded prepayments.
-    if (loanSummaries.length === 0) return [];
-    const data: { month: string; totalBalance: number }[] = [];
-    const today = new Date();
-    const startDate = addMonths(today, -12); 
-    const endDate = addMonths(today, 24); 
-    const numMonths = differenceInMonths(endDate, startDate) + 1;
-
-    for (let i = 0; i < numMonths; i++) {
-      const currentDate = addMonths(startDate, i);
-      let monthBalance = 0;
-      loanSummaries.forEach(summary => {
-        const paidEMIsSoFar = summary.schedule.filter(e => e.isPaid || (e.paymentDate && parseISO(e.paymentDate) <= currentDate)).length;
-        const entry = summary.schedule[paidEMIsSoFar -1];
-        if (entry && entry.paymentDate && parseISO(entry.paymentDate) <= currentDate) {
-             monthBalance += entry.remainingBalance;
-        } else if (summary.schedule.length > 0 && parseISO(summary.schedule[0].paymentDate) > currentDate) {
-            monthBalance += summary.originalLoan.principalAmount - summary.originalLoan.amountAlreadyPaid;
-        } else if(summary.status.currentBalance > 0 && paidEMIsSoFar === 0) {
-            // If no EMIs paid by date, but there is a current balance from loanStatus (based on initial amounts)
-            monthBalance += summary.status.currentBalance;
-        }
-      });
-      data.push({
-        month: format(currentDate, 'MMM yy'),
-        totalBalance: parseFloat(monthBalance.toFixed(2)),
-      });
-    }
-    return data.filter(d => d.totalBalance > 0 || data.some(other => other.totalBalance > 0));
-  }, [loanSummaries]);
-
-  const loanPrincipalDistributionData = useMemo(() => {
-     // Based on simplified loanSummaries.status.currentBalance
-    if (loanSummaries.length === 0 || overallStats.totalOutstanding === 0) return [];
-    return loanSummaries
-      .filter(summary => summary.status.currentBalance > 0)
-      .map((summary, index) => ({
-        name: summary.name,
-        value: parseFloat(summary.status.currentBalance.toFixed(2)),
-        fill: CHART_COLORS[index % CHART_COLORS.length],
-      }));
-  }, [loanSummaries, overallStats.totalOutstanding]);
-
-  const upcomingMonthlyPaymentsData = useMemo(() => {
-    // Based on simplified loanSummaries schedule
-    if (loanSummaries.length === 0) return [];
-    const data: { month: string; totalEMI: number }[] = [];
-    const today = new Date();
-    const numMonths = 12;
-
-    for (let i = 0; i < numMonths; i++) {
-      const targetMonthDate = addMonths(today, i);
-      const targetYear = getYear(targetMonthDate);
-      const targetMonth = getMonth(targetMonthDate);
-      let monthEMI = 0;
-
-      loanSummaries.forEach(summary => {
-        if (summary.status.currentBalance > 0) { // Only consider loans with outstanding balance from simplified summary
-          const nextPayment = summary.schedule.find(
-            e => !e.isPaid && e.paymentDate && parseISO(e.paymentDate) >= today && getYear(parseISO(e.paymentDate)) === targetYear && getMonth(parseISO(e.paymentDate)) === targetMonth
-          );
-          if (nextPayment) {
-            monthEMI += nextPayment.payment;
-          }
-        }
-      });
-      if (monthEMI > 0) {
-        data.push({
-          month: format(targetMonthDate, 'MMM yy'),
-          totalEMI: parseFloat(monthEMI.toFixed(2)),
-        });
-      }
-    }
-    return data;
-  }, [loanSummaries]);
+  const getInitials = (name?: string | null) => {
+    if (!name) return 'U';
+    const names = name.split(' ');
+    if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
+    return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
+  };
 
 
   if (isLoading) {
@@ -279,6 +185,85 @@ export default function DashboardPage() {
           </Button>
         </Link>
       </div>
+
+      {/* New Summary Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* User Profile Card */}
+        <Card className="lg:col-span-1 shadow-lg bg-card flex flex-col items-center p-6 rounded-xl">
+          <Badge variant="outline" className="mb-4 border-primary/50 text-primary bg-primary/10 font-semibold">
+            # ELITE MEMBER #
+          </Badge>
+          <Avatar className="w-24 h-24 mb-3 ring-2 ring-primary/50 ring-offset-2 ring-offset-card">
+            <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} data-ai-hint="profile person" />
+            <AvatarFallback className="text-3xl bg-muted">
+              {user?.displayName ? getInitials(user.displayName) : (user?.email ? user.email.substring(0,2).toUpperCase() : <UserIcon />)}
+            </AvatarFallback>
+          </Avatar>
+          <h2 className="text-xl font-semibold text-card-foreground">{user?.displayName || 'User Name'}</h2>
+          <p className="text-sm text-muted-foreground">{user?.email}</p>
+        </Card>
+
+        {/* Stats Cards Container */}
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <Card className="shadow-md rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                <TrendingDownIcon className="mr-2 h-4 w-4 text-destructive" /> Borrowed
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{formatCurrency(dashboardStats.totalBorrowed)}</p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-md rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                <TrendingUpIcon className="mr-2 h-4 w-4 text-green-500" /> Repaid
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{formatCurrency(dashboardStats.totalRepaidSoFar)}</p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-md rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                <Percent className="mr-2 h-4 w-4 text-blue-500" /> Average Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{dashboardStats.averageInterestRate}%</p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-md rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                <AlertCircle className="mr-2 h-4 w-4 text-yellow-500" /> Internal Risk Score
+                 <InfoIconLucide className="ml-1 h-3 w-3 text-muted-foreground cursor-pointer" title="Calculated based on internal factors" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">16.66 <span className="text-lg text-muted-foreground">/ 18.00</span></p>
+            </CardContent>
+          </Card>
+          <Card className="sm:col-span-2 shadow-md rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                 <ShieldCheck className="mr-2 h-4 w-4 text-indigo-500" /> Credit Score
+                 <InfoIconLucide className="ml-1 h-3 w-3 text-muted-foreground cursor-pointer" title="External credit bureau score" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <p className="text-3xl font-bold text-green-600">EXCELLENT</p>
+                    <p className="text-xs text-muted-foreground">Last Checked 3 days ago</p>
+                </div>
+                <CreditScoreGauge score={780} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
 
       {loanSummaries.length > 0 && (
         <Alert className="mb-6 shadow-md">
@@ -315,183 +300,48 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {loanSummaries.map((summary) => (
-          <Link key={summary.id} href={`/loans/${summary.id}`} legacyBehavior passHref>
-            <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer h-full flex flex-col">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="font-headline text-xl">{summary.name}</CardTitle>
-                  <span className="text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary">
-                    {summary.interestRate}% APR
-                  </span>
-                </div>
-                <CardDescription>
-                  Next payment due: {summary.nextDueDate ? formatDate(summary.nextDueDate) : (summary.status.currentBalance === 0 ? 'Paid Off' : 'N/A')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 flex-grow">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Pending Balance:</span>
-                  <span className="font-semibold">{formatCurrency(summary.currentPrincipal)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Monthly EMI:</span>
-                  <span className="font-semibold">{formatCurrency(summary.monthlyEMI)}</span>
-                </div>
-                <div>
-                  <Progress value={summary.completedPercentage} className="h-3 mt-1" />
-                  <p className="text-xs text-muted-foreground mt-1 text-right">
-                    {summary.completedPercentage.toFixed(2)}% paid
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
-
+      
       {loanSummaries.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-headline flex items-center">
-                <TrendingUp className="mr-2 h-5 w-5 text-accent" />
-                Overall Progress (Simplified)
-              </CardTitle>
-              <CardDescription>
-                A summary of your combined loan repayment based on initial terms.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Total Outstanding (Simplified): {formatCurrency(overallStats.totalOutstanding)}</p>
-              <p className="text-muted-foreground">Overall % Paid (Simplified): {overallStats.overallPercentagePaid}%</p>
-              <Progress value={overallStats.overallPercentagePaid} className="h-4 mt-2" />
-            </CardContent>
-          </Card>
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-headline flex items-center">
-                <ListChecks className="mr-2 h-5 w-5 text-accent" />
-                Next Actions
-              </CardTitle>
-              <CardDescription>
-                Upcoming due dates based on initial terms.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm">
-                {overallStats.nextActionDueDate && overallStats.nextActionLoanName ? (
-                  <li className="flex items-center">
-                    <span className="mr-2 h-2 w-2 rounded-full bg-primary"></span>
-                    Pay {overallStats.nextActionLoanName} EMI by {overallStats.nextActionDueDate}
-                  </li>
-                ) : (
-                   <li className="flex items-center text-muted-foreground">
-                     No upcoming payments or all loans paid off (based on simplified view).
-                   </li>
-                )}
-                 <li className="flex items-center">
-                    <span className="mr-2 h-2 w-2 rounded-full bg-primary/50"></span>
-                    Review loan details for prepayment opportunities.
-                  </li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {loanSummaries.length > 0 && (
-        <div className="mt-8 space-y-8">
-          <h2 className="text-2xl font-headline tracking-tight">Loan Analytics (Simplified Overview)</h2>
-           <p className="text-sm text-muted-foreground -mt-6">These charts are based on initial loan terms and do not reflect individually recorded prepayments. For detailed analytics, visit the specific loan page.</p>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="font-headline flex items-center">
-                  <LineChartIcon className="mr-2 h-5 w-5 text-accent" />
-                  Loan Balance Over Time
-                </CardTitle>
-                <CardDescription>Projected total outstanding balance (simplified).</CardDescription>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-4 md:p-6">
-                {loanBalanceOverTimeData.length > 0 ? (
-                  <ChartContainer config={{totalBalance: {label: "Total Balance", color: "hsl(var(--chart-1))"}}} className="h-[260px] sm:h-[300px] w-full">
-                    <LineChart data={loanBalanceOverTimeData} margin={{left: 12, right: 12, top:5, bottom: 5}}>
-                      <CartesianGrid vertical={false} />
-                      <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-                      <YAxis tickFormatter={(value) => `₹${value/1000}k`} />
-                      <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
-                      <Line dataKey="totalBalance" type="monotone" stroke="var(--color-totalBalance)" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ChartContainer>
-                ) : (
-                  <p className="text-muted-foreground text-center py-10">Not enough data to display balance over time.</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="font-headline flex items-center">
-                  <PieChartIcon className="mr-2 h-5 w-5 text-accent" />
-                  Loan Principal Distribution
-                </CardTitle>
-                <CardDescription>Breakdown of current outstanding principal by loan (simplified).</CardDescription>
-              </CardHeader>
-              <CardContent className="flex items-center justify-center p-3 sm:p-4 md:p-6">
-                {loanPrincipalDistributionData.length > 0 ? (
-                   <ChartContainer config={loanPrincipalDistributionData.reduce((acc, cur) => {acc[cur.name] = {label: cur.name, color: cur.fill}; return acc;}, {} as any)} className="h-[260px] sm:h-[300px] w-full">
-                    <PieChart>
-                      <ChartTooltip content={<ChartTooltipContent nameKey="name" hideIndicator />} />
-                      <Pie data={loanPrincipalDistributionData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false}>
-                        {loanPrincipalDistributionData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                         <LabelList
-                            dataKey="name"
-                            className="fill-background text-xs"
-                            stroke="none"
-                            formatter={(value: string) => value.length > 10 ? `${value.substring(0,10)}...` : value}
-                          />
-                      </Pie>
-                      <ChartLegend content={<ChartLegendContent nameKey="name" className="flex-wrap" />} />
-                    </PieChart>
-                  </ChartContainer>
-                ) : (
-                  <p className="text-muted-foreground text-center py-10">No outstanding loans to display distribution.</p>
-                )}
-              </CardContent>
-            </Card>
+        <>
+          <h2 className="text-2xl font-headline tracking-tight mt-10">Active Loans ({loanSummaries.length})</h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {loanSummaries.map((summary) => (
+              <Link key={summary.id} href={`/loans/${summary.id}`} legacyBehavior passHref>
+                <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer h-full flex flex-col rounded-xl">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="font-headline text-xl">{summary.name}</CardTitle>
+                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary">
+                        {summary.interestRate}% APR
+                      </span>
+                    </div>
+                    <CardDescription>
+                      Next payment due: {summary.nextDueDate ? formatDate(summary.nextDueDate) : (summary.status.currentBalance === 0 ? 'Paid Off' : 'N/A')}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3 flex-grow">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Pending Balance:</span>
+                      <span className="font-semibold">{formatCurrency(summary.currentPrincipal)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Monthly EMI:</span>
+                      <span className="font-semibold">{formatCurrency(summary.monthlyEMI)}</span>
+                    </div>
+                    <div>
+                      <Progress value={summary.completedPercentage} className="h-3 mt-1" />
+                      <p className="text-xs text-muted-foreground mt-1 text-right">
+                        {summary.completedPercentage.toFixed(2)}% paid
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
           </div>
-
-          <Card className="shadow-lg lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="font-headline flex items-center">
-                <BarChart2 className="mr-2 h-5 w-5 text-accent" />
-                Upcoming Monthly Payments
-              </CardTitle>
-              <CardDescription>Total EMI payments due in upcoming months (simplified).</CardDescription>
-            </CardHeader>
-            <CardContent className="p-3 sm:p-4 md:p-6">
-              {upcomingMonthlyPaymentsData.length > 0 ? (
-                <ChartContainer config={{totalEMI: {label: "Total EMI", color: "hsl(var(--chart-2))"}}} className="h-[260px] sm:h-[300px] w-full">
-                  <BarChart data={upcomingMonthlyPaymentsData} margin={{left: 12, right: 12, top:5, bottom: 5}}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-                    <YAxis tickFormatter={(value) => `₹${value/1000}k`} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="totalEMI" fill="var(--color-totalEMI)" radius={4} />
-                  </BarChart>
-                </ChartContainer>
-              ) : (
-                <p className="text-muted-foreground text-center py-10">No upcoming payments or data available.</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        </>
       )}
+
     </div>
   );
 }
