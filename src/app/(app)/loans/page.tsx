@@ -29,7 +29,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import Image from 'next/image';
+import { NoLoansFoundIllustration } from '@/components/illustrations/NoLoansFoundIllustration';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 export default function LoansPage() {
@@ -110,7 +110,7 @@ export default function LoansPage() {
             <CardDescription>Start managing your finances by adding your first loan.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center text-center">
-             <Image src="https://placehold.co/300x200.png" alt="No loans illustration" width={300} height={200} className="mb-6 rounded-md" data-ai-hint="financial graph empty" />
+             <NoLoansFoundIllustration className="mb-6 rounded-md" width={300} height={200} />
             <p className="mb-4 text-muted-foreground">
               You haven&apos;t added any loans yet. Click the button above to get started.
             </p>
