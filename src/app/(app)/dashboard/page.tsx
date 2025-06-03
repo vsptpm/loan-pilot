@@ -4,7 +4,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { PlusCircle, Info, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, ShieldCheck, Percent, CheckCircle2, AlertCircle, HelpCircle as InfoIconLucide, Loader2 } from 'lucide-react';
+import { PlusCircle, Info, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -30,6 +30,7 @@ import {
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { FinancialPlanningIllustration } from '@/components/illustrations/FinancialPlanningIllustration';
+import { parseISO } from 'date-fns';
 
 
 interface DashboardLoanSummary {
@@ -44,31 +45,6 @@ interface DashboardLoanSummary {
   status: LoanStatus;
   schedule: AmortizationEntry[];
 }
-
-const CreditScoreGauge = ({ score }: { score: number }) => (
-  <div className="relative w-36 h-18 mx-auto my-2">
-    <svg viewBox="0 0 100 50" className="w-full h-full transform ">
-      <path
-        d="M 10 48 A 38 38 0 0 1 90 48"
-        fill="none"
-        stroke="hsl(var(--muted))"
-        strokeWidth="8"
-        strokeLinecap="round"
-      />
-      <path
-        d="M 10 48 A 38 38 0 0 1 90 48"
-        fill="none"
-        stroke="hsl(var(--primary))"
-        strokeWidth="8"
-        strokeDasharray={`${Math.max(0, Math.min(100, (score - 300) / (850 - 300) * 100)) * 1.1938} 119.38`} // Adjusted circumference for r=38 approx 119.38
-        strokeLinecap="round"
-      />
-    </svg>
-    <div className="absolute inset-0 flex flex-col items-center justify-end pb-1">
-      <span className="text-2xl font-bold text-primary">{score}</span>
-    </div>
-  </div>
-);
 
 
 export default function DashboardPage() {
@@ -136,18 +112,37 @@ export default function DashboardPage() {
         totalBorrowed: 0,
         totalRepaidSoFar: 0,
         averageInterestRate: 0,
+        overallProgressPercentage: 0,
+        nextActionMessage: "Add your first loan to see next actions.",
       };
     }
 
     const totalBorrowed = loanSummaries.reduce((sum, s) => sum + s.originalLoan.principalAmount, 0);
-    const totalRepaidSoFar = loanSummaries.reduce((sum,s) => sum + s.status.totalPrincipalPaid, 0);
+    const totalRepaidSoFar = loanSummaries.reduce((sum,s) => sum + s.status.totalPrincipalPaid, 0); // Uses totalPrincipalPaid from status
     const totalInterestRateSum = loanSummaries.reduce((sum, s) => sum + s.interestRate, 0);
     const averageInterestRate = loanSummaries.length > 0 ? totalInterestRateSum / loanSummaries.length : 0;
+    const overallProgressPercentage = totalBorrowed > 0 ? (totalRepaidSoFar / totalBorrowed) * 100 : 0;
+
+    const activeLoansWithDueDates = loanSummaries
+      .filter(s => s.nextDueDate && s.currentPrincipal > 0)
+      .sort((a, b) => parseISO(a.nextDueDate!).getTime() - parseISO(b.nextDueDate!).getTime());
+
+    let nextActionMessage;
+    if (activeLoansWithDueDates.length > 0) {
+      const nextLoanAction = activeLoansWithDueDates[0];
+      nextActionMessage = `Next EMI for '${nextLoanAction.name}' due ${formatDate(nextLoanAction.nextDueDate!)}.`;
+    } else if (loanSummaries.every(s => s.currentPrincipal === 0)) {
+      nextActionMessage = "All loans are paid off! 🎉";
+    } else {
+      nextActionMessage = "No upcoming EMIs found for active loans. Check loan details.";
+    }
     
     return {
       totalBorrowed,
       totalRepaidSoFar,
       averageInterestRate: parseFloat(averageInterestRate.toFixed(2)),
+      overallProgressPercentage: parseFloat(overallProgressPercentage.toFixed(2)),
+      nextActionMessage,
     };
   }, [loanSummaries]);
 
@@ -235,30 +230,25 @@ export default function DashboardPage() {
               <p className="text-3xl font-bold">{dashboardStats.averageInterestRate}%</p>
             </CardContent>
           </Card>
-          <Card className="shadow-md rounded-xl">
+           <Card className="shadow-md rounded-xl">
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-                <AlertCircle className="mr-2 h-4 w-4 text-yellow-500" /> Internal Risk Score
-                 <InfoIconLucide className="ml-1 h-3 w-3 text-muted-foreground cursor-pointer" title="Calculated based on internal factors" />
+                <Activity className="mr-2 h-4 w-4 text-purple-500" /> Overall Progress
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">16.66 <span className="text-lg text-muted-foreground">/ 18.00</span></p>
+                <Progress value={dashboardStats.overallProgressPercentage} className="h-3 mb-2" />
+                <p className="text-sm font-semibold text-center">{dashboardStats.overallProgressPercentage.toFixed(2)}% <span className="text-xs text-muted-foreground">repaid</span></p>
             </CardContent>
           </Card>
           <Card className="sm:col-span-2 shadow-md rounded-xl">
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-                 <ShieldCheck className="mr-2 h-4 w-4 text-indigo-500" /> Credit Score
-                 <InfoIconLucide className="ml-1 h-3 w-3 text-muted-foreground cursor-pointer" title="External credit bureau score" />
+                 <ListChecks className="mr-2 h-4 w-4 text-orange-500" /> Next Actions
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div>
-                    <p className="text-3xl font-bold text-green-600">EXCELLENT</p>
-                    <p className="text-xs text-muted-foreground">Last Checked 3 days ago</p>
-                </div>
-                <CreditScoreGauge score={780} />
+            <CardContent>
+                <p className="text-sm">{dashboardStats.nextActionMessage}</p>
             </CardContent>
           </Card>
         </div>
@@ -353,3 +343,4 @@ export default function DashboardPage() {
 
     
 
+    
