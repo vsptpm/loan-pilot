@@ -64,18 +64,3 @@ export interface LoanSummary {
   completedPercentage: number;
   amortizationSchedule: AmortizationEntry[]; // Current schedule
 }
-
-// Input for Prepayment Simulation AI
-export type PrepaymentSimulationInput = {
-  principalAmount: number; // Original principal
-  interestRate: number; // Annual rate (e.g., 0.05 for 5%)
-  loanTermMonths: number; // Original term
-  remainingBalance: number; // Current outstanding balance
-  monthlyPayment: number; // Current EMI
-  prepaymentPercentage: number; // e.g., 0.10 for 10% of remaining balance
-};
-
-// Output for Prepayment Simulation AI
-export type PrepaymentSimulationOutput = {
-  newEstimatedClosureDate: string;
-  
