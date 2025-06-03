@@ -7,7 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from '@/hooks/useAuth';
 import type { Loan, AmortizationEntry } from '@/types';
 import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
 import { PlusCircle, Edit3, Trash2, MoreVertical, Loader2, SearchX, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
@@ -92,16 +92,13 @@ export default function LoansPage() {
       const monthlyEMI = calculateEMI(loan.principalAmount, loan.interestRate, loan.durationMonths);
       const initialPaidEMIs = getInitialPaidEMIsCount(loan.amountAlreadyPaid, monthlyEMI);
       
-      // For loan list summary, generate a BASIC schedule WITHOUT individual prepayments
       const basicSchedule = generateAmortizationSchedule(
         loan.principalAmount,
         loan.interestRate,
         loan.durationMonths,
         loan.startDate,
         initialPaidEMIs
-        // No recordedPrepayments passed here
       );
-      // Pass forSummaryView: true to getLoanStatus
       const status = getLoanStatus(loan, basicSchedule, true);
 
       return {
@@ -109,7 +106,7 @@ export default function LoansPage() {
         name: loan.name,
         interestRate: loan.interestRate,
         monthlyEMI: monthlyEMI,
-        currentPrincipal: status.currentBalance, // Adjusted by totalPrepaymentAmount in getLoanStatus
+        currentPrincipal: status.currentBalance, 
         completedPercentage: status.completedPercentage,
         nextDueDate: status.nextDueDate,
       };
@@ -119,13 +116,26 @@ export default function LoansPage() {
   const handleDeleteLoan = async (loanId: string) => {
     if (!user) return;
     try {
-      // TODO: Consider deleting subcollections like 'prepayments' if they exist.
-      // This might require a Firebase Function for robust, recursive deletion.
+      // Delete prepayments sub-collection first
+      const prepaymentsColRef = collection(db, `users/${user.uid}/loans/${loanId}/prepayments`);
+      const prepaymentsQuery = query(prepaymentsColRef);
+      const prepaymentsSnapshot = await getDocs(prepaymentsQuery);
+
+      if (!prepaymentsSnapshot.empty) {
+        const batch = writeBatch(db);
+        prepaymentsSnapshot.forEach((docSnapshot) => {
+          batch.delete(docSnapshot.ref);
+        });
+        await batch.commit(); // Delete all prepayments in a batch
+      }
+
+      // Then delete the loan document
       await deleteDoc(doc(db, `users/${user.uid}/loans`, loanId));
-      toast({ title: "Success", description: "Loan deleted successfully." });
+      
+      toast({ title: "Success", description: "Loan and its associated prepayments deleted successfully." });
     } catch (error) {
       console.error("Error deleting loan: ", error);
-      toast({ title: "Error", description: "Could not delete loan.", variant: "destructive" });
+      toast({ title: "Error", description: "Could not delete loan. Please check console for details.", variant: "destructive" });
     }
   };
   
@@ -149,7 +159,7 @@ export default function LoansPage() {
         </Link>
       </div>
 
-      {loanDisplayData.length > 0 && ( // Show alert only if there are loans to display
+      {loanDisplayData.length > 0 && ( 
          <Alert className="mb-6 shadow-md">
           <Info className="h-4 w-4" />
           <AlertTitle>Loan Card Information</AlertTitle>
@@ -249,7 +259,7 @@ export default function LoansPage() {
                           <AlertDialogHeader>
                             <UIDialogTitle>Are you sure?</UIDialogTitle>
                             <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the loan &quot;{loanSummary.name}&quot; and all its associated data.
+                              This action cannot be undone. This will permanently delete the loan &quot;{loanSummary.name}&quot; and all its associated data (including recorded prepayments).
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
