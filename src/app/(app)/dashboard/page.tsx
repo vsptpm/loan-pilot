@@ -4,7 +4,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { PlusCircle, TrendingUp, ListChecks, Loader2, LineChartIcon, PieChartIcon, BarChartIcon } from 'lucide-react';
+import { PlusCircle, TrendingUp, ListChecks, Loader2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -28,29 +28,7 @@ import {
 } from '@/lib/loanUtils';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { parseISO, addMonths, format, subMonths, getMonth, getYear, startOfMonth, isBefore, isAfter, isEqual } from 'date-fns';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-} from "recharts"
+import { parseISO } from 'date-fns';
 
 interface DashboardLoanSummary {
   id: string;
@@ -63,25 +41,6 @@ interface DashboardLoanSummary {
   originalLoan: Loan;
   status: LoanStatus;
 }
-
-const defaultChartConfig = {
-  totalBalance: {
-    label: "Total Balance",
-    color: "hsl(var(--chart-1))",
-  },
-  totalEMI: {
-    label: "Total EMI",
-    color: "hsl(var(--chart-2))",
-  },
-} satisfies ChartConfig;
-
-const pieChartColors = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -177,137 +136,6 @@ export default function DashboardPage() {
     };
   }, [loanSummaries]);
 
-  const loanBalanceOverTimeData = useMemo(() => {
-    if (loans.length === 0) return [];
-    const dataPoints: { month: string, totalBalance: number }[] = [];
-    const currentDate = new Date();
-    const startDate = subMonths(startOfMonth(currentDate), 12); // 12 months in past
-    const endDate = addMonths(startOfMonth(currentDate), 24); // 24 months in future
-
-    let iterDate = startDate;
-    while (isBefore(iterDate, endDate) || isEqual(iterDate, endDate)) {
-      let monthTotalBalance = 0;
-      loans.forEach(loan => {
-        const loanStartDate = parseISO(loan.startDate);
-        const loanEndDate = addMonths(loanStartDate, loan.durationMonths);
-        
-        if (isAfter(iterDate, loanEndDate) || isBefore(iterDate, startOfMonth(loanStartDate))) {
-          // Loan not active in this month or ended
-           if (isBefore(iterDate, startOfMonth(loanStartDate))) {
-             // If iterDate is before the loan even starts, consider its full principal if it wasn't paid down by amountAlreadyPaid
-             // This logic might need refinement if amountAlreadyPaid significantly reduces principal before first EMI
-             const emiForInitialCalc = calculateEMI(loan.principalAmount, loan.interestRate, loan.durationMonths);
-             const initialPaidEMIs = getInitialPaidEMIsCount(loan.amountAlreadyPaid, emiForInitialCalc);
-             if(initialPaidEMIs === 0) monthTotalBalance += (loan.principalAmount - loan.amountAlreadyPaid);
-
-           } else {
-             // Loan ended, balance is 0
-           }
-        } else {
-          const emi = calculateEMI(loan.principalAmount, loan.interestRate, loan.durationMonths);
-          const initialPaidEMIs = getInitialPaidEMIsCount(loan.amountAlreadyPaid, emi);
-          const schedule = generateAmortizationSchedule(loan.principalAmount, loan.interestRate, loan.durationMonths, loan.startDate, initialPaidEMIs);
-          
-          // Find the latest schedule entry on or before iterDate for this loan
-          let applicableEntry = null;
-          for (let i = schedule.length - 1; i >= 0; i--) {
-            const entryPaymentDate = parseISO(schedule[i].paymentDate);
-            if (isBefore(entryPaymentDate, iterDate) || isEqual(entryPaymentDate, iterDate)) {
-              applicableEntry = schedule[i];
-              break;
-            }
-          }
-          if (applicableEntry) {
-            monthTotalBalance += applicableEntry.remainingBalance;
-          } else {
-             // Before first payment, but after loan start, consider principal less amountAlreadyPaid if not covered by EMIs
-            const emiForInitialCalc = calculateEMI(loan.principalAmount, loan.interestRate, loan.durationMonths);
-            const initialPaidEMIsForThisLoan = getInitialPaidEMIsCount(loan.amountAlreadyPaid, emiForInitialCalc);
-            if(initialPaidEMIsForThisLoan === 0) {
-                 monthTotalBalance += (loan.principalAmount - loan.amountAlreadyPaid);
-            } else {
-                // If amountAlreadyPaid covers some EMIs, and we are before the first *actual* payment date
-                // but after loan start, the balance is from the schedule before any payment is made.
-                // This edge case might need very precise handling if first payment is far from startDate.
-                // For simplicity, we assume the schedule's first entry or principal - amountAlreadyPaid.
-                if(schedule.length > 0) {
-                    const firstBalance = schedule[0].remainingBalance; // this is after first EMI
-                    // Need balance *before* first EMI.
-                    monthTotalBalance += (loan.principalAmount - loan.amountAlreadyPaid); 
-                } else {
-                    monthTotalBalance += (loan.principalAmount - loan.amountAlreadyPaid);
-                }
-            }
-
-          }
-        }
-      });
-      dataPoints.push({ month: format(iterDate, 'MMM yy'), totalBalance: monthTotalBalance });
-      iterDate = addMonths(iterDate, 1);
-    }
-    return dataPoints.filter(dp => dp.totalBalance > 0 || dataPoints.some(p => p.totalBalance > 0) ); // Only show if there's some balance
-  }, [loans]);
-
-  const loanPrincipalDistributionData = useMemo(() => {
-    if (loanSummaries.length === 0) return [];
-    return loanSummaries.map((summary, index) => ({
-      name: summary.name,
-      value: summary.currentPrincipal,
-      fill: pieChartColors[index % pieChartColors.length],
-    })).filter(item => item.value > 0); // Only include loans with outstanding principal
-  }, [loanSummaries]);
-
-  const pieChartCustomConfig = useMemo(() => {
-    const config: ChartConfig = {};
-    loanPrincipalDistributionData.forEach((item) => {
-      config[item.name] = { // Use item.name which is unique loan name
-        label: item.name,
-        color: item.fill,
-      };
-    });
-    return config;
-  }, [loanPrincipalDistributionData]);
-
-
-  const upcomingMonthlyPaymentsData = useMemo(() => {
-    if (loans.length === 0) return [];
-    const data: { month: string, totalEMI: number }[] = [];
-    const currentDate = new Date();
-
-    for (let i = 0; i < 12; i++) { // Next 12 months
-      const targetMonthDate = addMonths(currentDate, i);
-      const monthKey = format(targetMonthDate, 'MMM yy');
-      let monthTotalEMI = 0;
-
-      loans.forEach(loan => {
-        const emi = calculateEMI(loan.principalAmount, loan.interestRate, loan.durationMonths);
-        const initialPaidEMIs = getInitialPaidEMIsCount(loan.amountAlreadyPaid, emi);
-        const schedule = generateAmortizationSchedule(loan.principalAmount, loan.interestRate, loan.durationMonths, loan.startDate, initialPaidEMIs);
-
-        const paymentInMonth = schedule.find(entry => {
-          const paymentDate = parseISO(entry.paymentDate);
-          // Check if paymentDate falls within the target month
-          return getYear(paymentDate) === getYear(targetMonthDate) && getMonth(paymentDate) === getMonth(targetMonthDate);
-        });
-
-        if (paymentInMonth && !paymentInMonth.isPaid) {
-             // Check if this EMI is after amountAlreadyPaid coverage
-            if (paymentInMonth.month > initialPaidEMIs) {
-                 monthTotalEMI += paymentInMonth.payment;
-            }
-        }
-      });
-      if (monthTotalEMI > 0) { // Only add month if there's an EMI
-        data.push({ month: monthKey, totalEMI: monthTotalEMI });
-      }
-    }
-    return data;
-  }, [loans]);
-
-
-  const fetchAnalyticsData = () => {
-    toast({ title: "Analytics", description: "Fetching latest analytics data (Not yet implemented)." });
-  };
 
   if (isLoading) {
     return (
@@ -458,155 +286,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {loanSummaries.length > 0 && (
-        <div className="mt-8 space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <h2 className="text-2xl font-headline tracking-tight">
-              Loan Analytics
-            </h2>
-            {/* <Button onClick={fetchAnalyticsData} variant="outline">
-              <TrendingUp className="mr-2 h-4 w-4" /> Fetch Latest Data
-            </Button> */}
-          </div>
+      {/* Loan Analytics Section Removed */}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Total Loans</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">{loanSummaries.length}</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Total Outstanding Principal</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">{formatCurrency(overallStats.totalOutstanding)}</p>
-              </CardContent>
-            </Card>
-             <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Overall Progress</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">{overallStats.overallPercentagePaid}%</p>
-                 <Progress value={overallStats.overallPercentagePaid} className="h-3 mt-2" />
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="shadow-lg">
-            <CardHeader>
-                <CardTitle className="text-xl font-headline flex items-center">
-                    <LineChartIcon className="mr-2 h-5 w-5 text-accent" /> Loan Balance Over Time
-                </CardTitle>
-                <CardDescription>Projected total outstanding balance over the next 24 months and past 12 months.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loanBalanceOverTimeData.length > 0 ? (
-                <ChartContainer config={defaultChartConfig} className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={loanBalanceOverTimeData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-                      <YAxis tickFormatter={(value) => formatCurrency(value).replace('₹','')} tickLine={false} axisLine={false} width={80} />
-                      <ChartTooltip
-                        cursor={false}
-                        content={<ChartTooltipContent 
-                                  formatter={(value) => formatCurrency(value as number)} 
-                                  indicator="line" />}
-                      />
-                      <Line dataKey="totalBalance" type="monotone" stroke="var(--color-totalBalance)" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              ) : (
-                <div className="h-64 bg-muted/30 dark:bg-muted/20 rounded-md flex items-center justify-center text-muted-foreground">No data available for balance projection.</div>
-              )}
-            </CardContent>
-          </Card>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl font-headline flex items-center">
-                    <PieChartIcon className="mr-2 h-5 w-5 text-accent" /> Loan Principal Distribution
-                </CardTitle>
-                <CardDescription>Current outstanding principal distribution by loan.</CardDescription>
-              </CardHeader>
-              <CardContent className="flex justify-center">
-                {loanPrincipalDistributionData.length > 0 ? (
-                  <ChartContainer config={pieChartCustomConfig} className="h-[300px] w-full max-w-[400px]">
-                     <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <ChartTooltip
-                          cursor={false}
-                          content={<ChartTooltipContent 
-                                    hideLabel 
-                                    formatter={(value, name) => `${name}: ${formatCurrency(value as number)}`}
-                                    />}
-                        />
-                        <Pie data={loanPrincipalDistributionData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false} 
-                             label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
-                                const RADIAN = Math.PI / 180;
-                                const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                                const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                                const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                                return (percent * 100) > 5 ? ( // Only show label if percent is > 5%
-                                  <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="10px">
-                                    {`${(percent * 100).toFixed(0)}%`}
-                                  </text>
-                                ) : null;
-                              }}>
-                          {loanPrincipalDistributionData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                         <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                ) : (
-                  <div className="h-64 bg-muted/30 dark:bg-muted/20 rounded-md flex items-center justify-center text-muted-foreground w-full">No loans with outstanding balance.</div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl font-headline flex items-center">
-                    <BarChartIcon className="mr-2 h-5 w-5 text-accent" /> Upcoming Monthly Payments
-                </CardTitle>
-                <CardDescription>Total EMIs due in the upcoming months.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {upcomingMonthlyPaymentsData.length > 0 ? (
-                  <ChartContainer config={defaultChartConfig} className="h-[300px] w-full">
-                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={upcomingMonthlyPaymentsData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8}/>
-                        <YAxis tickFormatter={(value) => formatCurrency(value).replace('₹','')} tickLine={false} axisLine={false} width={80} />
-                         <ChartTooltip
-                            cursor={false}
-                            content={<ChartTooltipContent 
-                                      formatter={(value) => formatCurrency(value as number)} 
-                                      indicator="dashed" />}
-                          />
-                        <Bar dataKey="totalEMI" fill="var(--color-totalEMI)" radius={4} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                ) : (
-                  <div className="h-64 bg-muted/30 dark:bg-muted/20 rounded-md flex items-center justify-center text-muted-foreground">No upcoming EMIs or all loans paid off.</div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
