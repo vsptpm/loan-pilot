@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/hooks/useAuth';
 import type { Loan, AmortizationEntry } from '@/types';
 import { db } from '@/lib/firebase';
@@ -77,7 +78,9 @@ export default function LoanDetailPage() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  const [prepaymentInputType, setPrepaymentInputType] = useState<'percentage' | 'amount'>('percentage');
   const [prepaymentPercentage, setPrepaymentPercentage] = useState('');
+  const [prepaymentCustomAmount, setPrepaymentCustomAmount] = useState('');
   const [prepaymentAfterMonth, setPrepaymentAfterMonth] = useState('');
   const [simulationResults, setSimulationResults] = useState<SimulationResults | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
@@ -153,19 +156,30 @@ export default function LoanDetailPage() {
       return;
     }
 
-    const percentage = parseFloat(prepaymentPercentage);
     const afterMonth = parseInt(prepaymentAfterMonth, 10);
+    let parsedPercentage: number | undefined;
+    let parsedCustomAmount: number | undefined;
+    let prepaymentAmountValue: number;
 
-    if (isNaN(percentage) || percentage <= 0 || percentage > 100) {
-      toast({ title: "Invalid Input", description: "Please enter a valid prepayment percentage (1-100).", variant: "destructive" });
-      return;
+    if (prepaymentInputType === 'percentage') {
+      parsedPercentage = parseFloat(prepaymentPercentage);
+      if (isNaN(parsedPercentage) || parsedPercentage <= 0 || parsedPercentage > 100) {
+        toast({ title: "Invalid Input", description: "Please enter a valid prepayment percentage (1-100).", variant: "destructive" });
+        return;
+      }
+    } else { // 'amount'
+      parsedCustomAmount = parseFloat(prepaymentCustomAmount);
+      if (isNaN(parsedCustomAmount) || parsedCustomAmount <= 0) {
+        toast({ title: "Invalid Input", description: "Please enter a valid positive prepayment amount.", variant: "destructive" });
+        return;
+      }
     }
+
     if (isNaN(afterMonth) || afterMonth < 0 || afterMonth > originalSchedule.length) {
-      // allow 0 for prepayment before any EMI
       toast({ title: "Invalid Input", description: `Prepayment month must be between 0 and ${originalSchedule.length}.`, variant: "destructive" });
       return;
     }
-
+    
     setIsSimulating(true);
 
     let principalAtPrepaymentTime: number;
@@ -181,9 +195,8 @@ export default function LoanDetailPage() {
         principalAtPrepaymentTime = entryBeforePrepayment.remainingBalance;
     }
 
-    if (principalAtPrepaymentTime <= 0) {
+    if (principalAtPrepaymentTime <= 0) { // Loan already cleared at this point
         toast({ title: "Loan Cleared", description: "Loan balance is already zero or negative at the selected point.", variant: "default" });
-        setIsSimulating(false);
         setSimulationResults({
             newClosureDate: originalSchedule[afterMonth-1]?.paymentDate || loan.startDate,
             interestSaved: 0,
@@ -192,20 +205,29 @@ export default function LoanDetailPage() {
             simulatedSchedule: originalSchedule.slice(0, afterMonth),
             oldClosureDate: originalSchedule[originalSchedule.length-1]?.paymentDate || null,
         });
-        return;
-    }
-
-    const prepaymentAmountValue = parseFloat(((percentage / 100) * principalAtPrepaymentTime).toFixed(2));
-    
-    if (prepaymentAmountValue <=0) {
-        toast({ title: "Invalid Prepayment", description: "Calculated prepayment amount is zero or less.", variant: "destructive" });
         setIsSimulating(false);
         return;
     }
 
+    if (prepaymentInputType === 'percentage' && parsedPercentage !== undefined) {
+      prepaymentAmountValue = parseFloat(((parsedPercentage / 100) * principalAtPrepaymentTime).toFixed(2));
+    } else if (parsedCustomAmount !== undefined) {
+      prepaymentAmountValue = parsedCustomAmount;
+    } else {
+      // Should not happen if validation is correct
+      toast({ title: "Error", description: "Prepayment value could not be determined.", variant: "destructive" });
+      setIsSimulating(false);
+      return;
+    }
+    
+    if (prepaymentAmountValue <=0) {
+        toast({ title: "Invalid Prepayment", description: "Calculated or entered prepayment amount is zero or less for a non-zero balance.", variant: "destructive" });
+        setIsSimulating(false);
+        return;
+    }
 
     const simulatedSchedule = simulatePrepayment(
-      loan, // Pass the full loan object for context if needed by simulatePrepayment
+      loan,
       originalSchedule,
       prepaymentAmountValue,
       afterMonth
@@ -305,20 +327,59 @@ export default function LoanDetailPage() {
           </CardTitle>
           <CardDescription>See how a prepayment could affect your loan.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          <div>
+            <Label className="mb-2 block font-medium">Prepayment Type</Label>
+            <RadioGroup
+                defaultValue="percentage"
+                value={prepaymentInputType}
+                onValueChange={(value: 'percentage' | 'amount') => {
+                    setPrepaymentInputType(value);
+                    if (value === 'percentage') setPrepaymentCustomAmount('');
+                    else setPrepaymentPercentage('');
+                }}
+                className="flex gap-x-4 gap-y-2 flex-wrap"
+            >
+                <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="percentage" id="type-percentage" />
+                    <Label htmlFor="type-percentage" className="font-normal cursor-pointer">By Percentage</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="amount" id="type-amount" />
+                    <Label htmlFor="type-amount" className="font-normal cursor-pointer">By Custom Amount</Label>
+                </div>
+            </RadioGroup>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="prepaymentPercentage">Prepayment Percentage (%)</Label>
-              <Input
-                id="prepaymentPercentage"
-                type="number"
-                placeholder="e.g., 10"
-                value={prepaymentPercentage}
-                onChange={(e) => setPrepaymentPercentage(e.target.value)}
-                disabled={isSimulating}
-              />
-              <p className="text-xs text-muted-foreground">Enter percentage of outstanding balance to prepay.</p>
-            </div>
+            {prepaymentInputType === 'percentage' ? (
+              <div className="space-y-2">
+                <Label htmlFor="prepaymentPercentage">Prepayment Percentage (%)</Label>
+                <Input
+                  id="prepaymentPercentage"
+                  type="number"
+                  placeholder="e.g., 10"
+                  value={prepaymentPercentage}
+                  onChange={(e) => setPrepaymentPercentage(e.target.value)}
+                  disabled={isSimulating}
+                />
+                <p className="text-xs text-muted-foreground">Percentage of current outstanding balance to prepay.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="prepaymentCustomAmount">Custom Prepayment Amount ({formatCurrency(0).charAt(0)})</Label>
+                <Input
+                  id="prepaymentCustomAmount"
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g., 5000"
+                  value={prepaymentCustomAmount}
+                  onChange={(e) => setPrepaymentCustomAmount(e.target.value)}
+                  disabled={isSimulating}
+                />
+                <p className="text-xs text-muted-foreground">Fixed amount to be prepaid.</p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="prepaymentAfterMonth">Prepayment After EMI Number</Label>
               <Input
@@ -460,4 +521,3 @@ export default function LoanDetailPage() {
     </div>
   );
 }
-
