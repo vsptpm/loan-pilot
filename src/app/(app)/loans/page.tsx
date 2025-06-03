@@ -176,85 +176,82 @@ export default function LoansPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {loanDisplayData.map((loanSummary) => (
-            <Card key={loanSummary.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <Link href={`/loans/${loanSummary.id}`} passHref legacyBehavior>
-                    <a className="flex-grow mr-2">
-                      <CardTitle className="font-headline text-xl hover:underline">{loanSummary.name}</CardTitle>
-                    </a>
-                  </Link>
-                  <div className="flex items-center flex-shrink-0">
-                    <span className="text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary mr-2 whitespace-nowrap">
-                      {loanSummary.interestRate}% APR
-                    </span>
-                    <AlertDialog>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <Link href={`/loans/${loanSummary.id}`} passHref legacyBehavior>
-                            <DropdownMenuItem><Eye className="mr-2 h-4 w-4" />View Details</DropdownMenuItem>
-                          </Link>
-                          <Link href={`/loans/edit/${loanSummary.id}`} passHref legacyBehavior>
-                           <DropdownMenuItem><Edit3 className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                          </Link>
-                          <AlertDialogTrigger asChild>
-                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                              <Trash2 className="mr-2 h-4 w-4" />Delete
+            <Link key={loanSummary.id} href={`/loans/${loanSummary.id}`} legacyBehavior passHref>
+              <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer h-full flex flex-col">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="font-headline text-xl hover:underline flex-grow mr-2">{loanSummary.name}</CardTitle>
+                    <div className="flex items-center flex-shrink-0">
+                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary mr-2 whitespace-nowrap">
+                        {loanSummary.interestRate}% APR
+                      </span>
+                      <AlertDialog>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/loans/${loanSummary.id}`} legacyBehavior passHref>
+                                <a><Eye className="mr-2 h-4 w-4" />View Details</a>
+                              </Link>
                             </DropdownMenuItem>
-                          </AlertDialogTrigger>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the loan "{loanSummary.name}" and all its associated data.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDeleteLoan(loanSummary.id)} className="bg-destructive hover:bg-destructive/90">
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/loans/edit/${loanSummary.id}`} legacyBehavior passHref>
+                                <a><Edit3 className="mr-2 h-4 w-4" />Edit</a>
+                              </Link>
+                            </DropdownMenuItem>
+                            <AlertDialogTrigger asChild>
+                              <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                <Trash2 className="mr-2 h-4 w-4" />Delete
+                              </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete the loan "{loanSummary.name}" and all its associated data.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteLoan(loanSummary.id)} className="bg-destructive hover:bg-destructive/90">
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
-                </div>
-                <CardDescription>
-                  Next payment due: {loanSummary.nextDueDate ? formatDate(loanSummary.nextDueDate) : 'N/A'}
-                </CardDescription>
-              </CardHeader>
-              <Link href={`/loans/${loanSummary.id}`} passHref legacyBehavior>
-                <a className="block flex-grow">
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Pending Balance:</span>
-                      <span className="font-semibold">{formatCurrency(loanSummary.currentPrincipal)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Monthly EMI:</span>
-                      <span className="font-semibold">{formatCurrency(loanSummary.monthlyEMI)}</span>
-                    </div>
-                    <div>
-                      <Progress value={loanSummary.completedPercentage} className="h-3 mt-1" />
-                      <p className="text-xs text-muted-foreground mt-1 text-right">
-                        {loanSummary.completedPercentage}% paid
-                      </p>
-                    </div>
-                  </CardContent>
-                </a>
-              </Link>
-            </Card>
+                  <CardDescription>
+                    Next payment due: {loanSummary.nextDueDate ? formatDate(loanSummary.nextDueDate) : 'N/A'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 flex-grow">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Pending Balance:</span>
+                    <span className="font-semibold">{formatCurrency(loanSummary.currentPrincipal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Monthly EMI:</span>
+                    <span className="font-semibold">{formatCurrency(loanSummary.monthlyEMI)}</span>
+                  </div>
+                  <div>
+                    <Progress value={loanSummary.completedPercentage} className="h-3 mt-1" />
+                    <p className="text-xs text-muted-foreground mt-1 text-right">
+                      {loanSummary.completedPercentage}% paid
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}
     </div>
   );
 }
-
