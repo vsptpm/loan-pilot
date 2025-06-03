@@ -15,7 +15,6 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { useEffect, useState, useMemo } from 'react';
 import type { Loan, AmortizationEntry } from '@/types';
 import { db } from '@/lib/firebase';
@@ -185,9 +184,6 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* User Profile Card */}
         <Card className="lg:col-span-1 shadow-lg bg-card flex flex-col items-center p-6 rounded-xl">
-          <Badge variant="outline" className="mb-4 border-primary/50 text-primary bg-primary/10 font-semibold">
-            # ELITE MEMBER #
-          </Badge>
           <Avatar className="w-24 h-24 mb-3 ring-2 ring-primary/50 ring-offset-2 ring-offset-card">
             <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} data-ai-hint="profile person" />
             <AvatarFallback className="text-3xl bg-muted">
