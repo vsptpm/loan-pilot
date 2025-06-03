@@ -409,7 +409,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent className="p-3 sm:p-4 md:p-6">
                 {loanBalanceOverTimeData.length > 0 ? (
-                  <ChartContainer config={{totalBalance: {label: "Total Balance", color: "hsl(var(--chart-1))"}}} className="h-[300px] w-full">
+                  <ChartContainer config={{totalBalance: {label: "Total Balance", color: "hsl(var(--chart-1))"}}} className="h-[260px] sm:h-[300px] w-full">
                     <LineChart data={loanBalanceOverTimeData} margin={{left: 12, right: 12, top:5, bottom: 5}}>
                       <CartesianGrid vertical={false} />
                       <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
@@ -434,7 +434,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent className="flex items-center justify-center p-3 sm:p-4 md:p-6">
                 {loanPrincipalDistributionData.length > 0 ? (
-                   <ChartContainer config={loanPrincipalDistributionData.reduce((acc, cur) => {acc[cur.name] = {label: cur.name, color: cur.fill}; return acc;}, {} as any)} className="h-[300px] w-full">
+                   <ChartContainer config={loanPrincipalDistributionData.reduce((acc, cur) => {acc[cur.name] = {label: cur.name, color: cur.fill}; return acc;}, {} as any)} className="h-[260px] sm:h-[300px] w-full">
                     <PieChart>
                       <ChartTooltip content={<ChartTooltipContent nameKey="name" hideIndicator />} />
                       <Pie data={loanPrincipalDistributionData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false}>
@@ -468,7 +468,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-3 sm:p-4 md:p-6">
               {upcomingMonthlyPaymentsData.length > 0 ? (
-                <ChartContainer config={{totalEMI: {label: "Total EMI", color: "hsl(var(--chart-2))"}}} className="h-[300px] w-full">
+                <ChartContainer config={{totalEMI: {label: "Total EMI", color: "hsl(var(--chart-2))"}}} className="h-[260px] sm:h-[300px] w-full">
                   <BarChart data={upcomingMonthlyPaymentsData} margin={{left: 12, right: 12, top:5, bottom: 5}}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
@@ -487,6 +487,8 @@ export default function DashboardPage() {
     </div>
   );
 }
+    
+
     
 
     
