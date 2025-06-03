@@ -481,7 +481,7 @@ export default function LoanDetailPage() {
                     <span className="font-medium">{formatCurrency(loanStatus.currentBalance)}</span>
                 </div>
                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">EMIs Due (as of today):</span>
+                    <span className="text-muted-foreground">EMIs Paid:</span>
                     <span className="font-medium">{loanStatus.paidEMIsCount} / {currentAmortizationSchedule.length}</span>
                 </div>
             </div>
