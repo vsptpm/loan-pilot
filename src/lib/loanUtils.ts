@@ -52,7 +52,7 @@ export function generateAmortizationSchedule(
   if (termMonths <= 0 && principal > 0) {
       const paymentDate = formatISO(typeof startDate === 'string' ? parseISO(startDate) : startDate, { representation: 'date' });
       const paymentDueDate = parseISO(paymentDate);
-      const isEntryPastOrToday = isBefore(paymentDueDate, todayDateOnly) || isEqual(paymentDueDate, todayDateOnly);
+      // const isEntryPastOrToday = isBefore(paymentDueDate, todayDateOnly) || isEqual(paymentDueDate, todayDateOnly);
       const finalIsPaid = true; // Immediate repayment is always considered paid.
 
       return [{
@@ -76,8 +76,8 @@ export function generateAmortizationSchedule(
     const simpleEMI = parseFloat((principal / termMonths).toFixed(2));
     let bal = principal;
     for (let i = 0; i < termMonths; i++) {
-        const paymentDate = addMonths(typeof startDate === 'string' ? parseISO(startDate) : startDate, i + 1);
-        const paymentDateISO = formatISO(paymentDate, { representation: 'date' });
+        const paymentDateDt = addMonths(typeof startDate === 'string' ? parseISO(startDate) : startDate, i + 1);
+        const paymentDateISO = formatISO(paymentDateDt, { representation: 'date' });
         const paymentDueDate = parseISO(paymentDateISO);
 
         const principalPaidThisMonth = (i === termMonths - 1) ? bal : simpleEMI;
@@ -106,8 +106,8 @@ export function generateAmortizationSchedule(
     console.warn("EMI calculated as 0 for a loan with positive principal and interest. Schedule may be incorrect.");
     if (principal - (recordedPrepayments.reduce((sum, pp) => sum + pp.amount, 0)) <=0 ) {
          const paymentDate = formatISO(typeof startDate === 'string' ? parseISO(startDate) : startDate, { representation: 'date' });
-         const paymentDueDate = parseISO(paymentDate);
-         const isEntryPastOrToday = isBefore(paymentDueDate, todayDateOnly) || isEqual(paymentDueDate, todayDateOnly);
+         // const paymentDueDate = parseISO(paymentDate);
+         // const isEntryPastOrToday = isBefore(paymentDueDate, todayDateOnly) || isEqual(paymentDueDate, todayDateOnly);
          const finalIsPaid = true; 
          return [{
             month: 1,
@@ -131,12 +131,15 @@ export function generateAmortizationSchedule(
   let prepaymentPointer = 0;
   let effectiveMonth = 0;
 
+  // Apply prepayments made before the first scheduled EMI due date
   while(prepaymentPointer < sortedPrepayments.length) {
     const prepayment = sortedPrepayments[prepaymentPointer];
     const prepaymentDate = parseISO(prepayment.date);
+    // First EMI is due 1 month after loan start date
     const firstEmiDueDate = addMonths(loanStartDate, 1);
 
-    if (prepaymentDate < firstEmiDueDate) {
+    // If prepayment is on or before the loan start date, or before the first EMI is due
+    if (isBefore(prepaymentDate, firstEmiDueDate) || isEqual(prepaymentDate, loanStartDate)) {
         if (currentBalance > 0) {
             const amountToApply = Math.min(prepayment.amount, currentBalance);
             currentBalance -= amountToApply;
@@ -145,28 +148,29 @@ export function generateAmortizationSchedule(
         prepaymentPointer++;
         if (currentBalance <= 0) break;
     } else {
-        break; 
+        break; // Prepayments from here on are after or on first EMI date
     }
   }
   
   if (currentBalance <= 0) { 
-     const paymentDate = sortedPrepayments.length > 0 ? sortedPrepayments[prepaymentPointer-1].date : formatISO(loanStartDate, {representation: 'date'});
-     const paymentDueDate = parseISO(paymentDate);
-     const isEntryPastOrToday = isBefore(paymentDueDate, todayDateOnly) || isEqual(paymentDueDate, todayDateOnly);
+     // Loan paid off by prepayments before first EMI
+     const lastPpDate = sortedPrepayments.length > 0 ? sortedPrepayments[prepaymentPointer-1].date : formatISO(loanStartDate, {representation: 'date'});
+     // const paymentDueDate = parseISO(lastPpDate);
+     // const isEntryPastOrToday = isBefore(paymentDueDate, todayDateOnly) || isEqual(paymentDueDate, todayDateOnly);
      const finalIsPaid = true;
      return [{
         month: 1,
-        paymentDate: paymentDate,
-        payment: principal, 
+        paymentDate: lastPpDate, // Use the date of the last prepayment that cleared it
+        payment: principal, // Total payment effectively equals principal
         principalPaid: principal,
         interestPaid: 0,
         remainingBalance: 0,
         isPaid: finalIsPaid,
-        actualPaidDate: finalIsPaid ? paymentDate : undefined,
+        actualPaidDate: finalIsPaid ? lastPpDate : undefined,
      }];
   }
 
-  const maxIterations = termMonths + (recordedPrepayments.length * 2) + 12 ; 
+  const maxIterations = termMonths + (recordedPrepayments.length * 2) + 24 ; // Increased buffer
 
   for (let i = 0; i < maxIterations; i++) {
     if (currentBalance <= 0.01) break; 
@@ -176,44 +180,48 @@ export function generateAmortizationSchedule(
     const currentMonthPaymentDateISO = formatISO(currentMonthPaymentDateDt, { representation: 'date' });
     const paymentDueDate = parseISO(currentMonthPaymentDateISO);
     
-    const previousCycleEndDate = addMonths(loanStartDate, effectiveMonth -1);
+    // Consider prepayments that fall between the last EMI date and the current EMI due date
+    const previousEmiDueDate = addMonths(loanStartDate, effectiveMonth -1);
 
     while (prepaymentPointer < sortedPrepayments.length) {
       const prepayment = sortedPrepayments[prepaymentPointer];
       const prepaymentDate = parseISO(prepayment.date);
 
-      if (prepaymentDate > previousCycleEndDate && prepaymentDate <= currentMonthPaymentDateDt) {
+      // If prepayment date is after previous EMI due date AND on or before current EMI due date
+      if (isAfter(prepaymentDate, previousEmiDueDate) && (isBefore(prepaymentDate, currentMonthPaymentDateDt) || isEqual(prepaymentDate, currentMonthPaymentDateDt))) {
          if (currentBalance > 0) {
             const amountToApply = Math.min(prepayment.amount, currentBalance);
             currentBalance -= amountToApply;
             currentBalance = parseFloat(currentBalance.toFixed(2));
          }
         prepaymentPointer++;
-        if (currentBalance <= 0) break;
-      } else if (prepaymentDate <= previousCycleEndDate) {
+        if (currentBalance <= 0) break; // Loan cleared by this prepayment
+      } else if (isBefore(prepaymentDate, previousEmiDueDate) || isEqual(prepaymentDate, previousEmiDueDate)) {
+        // This prepayment was already accounted for or is from a past cycle
         prepaymentPointer++; 
       } else {
-        break; 
+        break; // This prepayment is for a future cycle
       }
     }
 
-    if (currentBalance <= 0.01) break;
+    if (currentBalance <= 0.01) break; // Break if loan cleared by prepayments before EMI calculation
 
     const interestForMonth = annualRate > 0 ? parseFloat((currentBalance * monthlyRate).toFixed(2)) : 0;
     let principalPaidThisMonth = parseFloat((emi - interestForMonth).toFixed(2));
     let actualPaymentThisMonth = emi;
 
     if (principalPaidThisMonth < 0 && annualRate > 0) { 
-        principalPaidThisMonth = 0; 
+        principalPaidThisMonth = 0; // Interest is more than EMI, all EMI goes to interest
     }
     
+    // If current balance is less than the scheduled principal payment for this month
     if (currentBalance - principalPaidThisMonth <= 0.01 && currentBalance > 0) {
-      principalPaidThisMonth = currentBalance;
+      principalPaidThisMonth = currentBalance; // Pay off remaining balance
       actualPaymentThisMonth = parseFloat((principalPaidThisMonth + interestForMonth).toFixed(2));
     }
     
     currentBalance = parseFloat((currentBalance - principalPaidThisMonth).toFixed(2));
-    currentBalance = Math.max(0, currentBalance);
+    currentBalance = Math.max(0, currentBalance); // Ensure balance doesn't go negative
 
     const isEntryPaidByInitial = effectiveMonth <= initialPaidEMIs;
     const isEntryPastOrToday = isBefore(paymentDueDate, todayDateOnly) || isEqual(paymentDueDate, todayDateOnly);
@@ -243,7 +251,7 @@ export function generateAmortizationSchedule(
  * @param formData The loan form data.
  * @returns A partial Loan object ready for Firestore.
  */
-export function processLoanFormData(formData: LoanFormData): Omit<Loan, 'id' | 'userId' | 'createdAt' | 'updatedAt'> {
+export function processLoanFormData(formData: LoanFormData): Omit<Loan, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'totalPrepaymentAmount'> {
   const durationMonths = formData.durationType === 'years' ? formData.duration * 12 : formData.duration;
   
   return {
@@ -269,102 +277,122 @@ export interface LoanStatus {
 }
 
 /**
- * Calculates the current status of a loan based on its amortization schedule (potentially prepayment-adjusted) and current date.
- * The schedule provided should have its `isPaid` flags set correctly (e.g., by generateAmortizationSchedule assuming past EMIs are paid).
- * @param loan The loan object.
+ * Calculates the current status of a loan.
+ * If forSummaryView is true, it approximates currentBalance using loan.totalPrepaymentAmount
+ * after calculating schedule-based balance (schedule should be basic in this case).
+ * Otherwise (for detail view), it relies on the provided schedule which should already be
+ * prepayment-adjusted by generateAmortizationSchedule.
+ * @param loan The loan object, potentially with totalPrepaymentAmount.
  * @param schedule The loan's amortization schedule.
- * @returns A LoanStatus object reflecting status as of today.
+ * @param forSummaryView If true, applies totalPrepaymentAmount to adjust balance for summaries.
+ * @returns A LoanStatus object.
  */
-export function getLoanStatus(loan: Loan, schedule: AmortizationEntry[]): LoanStatus {
+export function getLoanStatus(
+  loan: Loan,
+  schedule: AmortizationEntry[],
+  forSummaryView: boolean = false
+): LoanStatus {
   const today = new Date();
   const todayDateOnly = parseISO(formatISO(today, { representation: 'date' }));
 
   if (!schedule || schedule.length === 0) {
-    const effectivelyPaidOff = loan.principalAmount > 0; 
+    let currentBal = loan.principalAmount - (loan.amountAlreadyPaid || 0);
+    if (forSummaryView && loan.totalPrepaymentAmount) {
+      currentBal -= loan.totalPrepaymentAmount;
+    }
+    currentBal = Math.max(0, currentBal);
+    
+    const principalPaid = loan.principalAmount - currentBal;
+    const isEffectivelyPaidOff = currentBal === 0 && loan.principalAmount > 0;
+
     return {
-      currentBalance: 0,
+      currentBalance: currentBal,
       totalInterestPaid: 0, 
-      totalPrincipalPaid: effectivelyPaidOff ? loan.principalAmount : 0,
+      totalPrincipalPaid: principalPaid,
       nextDueDate: null,
       paidEMIsCount: 0, 
       remainingEMIsCount: 0,
-      completedPercentage: effectivelyPaidOff || loan.principalAmount === 0 ? 100 : 0,
+      completedPercentage: isEffectivelyPaidOff || loan.principalAmount === 0 ? 100 : (loan.principalAmount > 0 ? (principalPaid / loan.principalAmount) * 100 : 0),
       estimatedClosureDate: loan.startDate, 
     };
   }
 
-  let currentBalance = loan.principalAmount - (loan.amountAlreadyPaid || 0); // Start with principal reduced by initial payments
-  let totalInterestPaidToDate = 0;
-  let totalPrincipalPaidToDate = loan.amountAlreadyPaid || 0; // Initial payment is all principal
+  let currentBalanceFromSchedule = loan.principalAmount; // Base for schedule calculation
+  let totalPrincipalScheduledPaid = 0;
+  let totalInterestScheduledPaid = 0;
   let paidEMIsSoFarCount = 0;
   let nextPaymentDueDate: string | null = null;
-  
-  // Adjust currentBalance based on schedule entries marked as paid (which now includes past/today dates)
-  // The schedule's remainingBalance should reflect this already.
-  
   let lastProcessedEntry: AmortizationEntry | null = null;
-
+  
   for (const entry of schedule) {
-    if (entry.isPaid) { // isPaid is true if initialPaid or (past/today due date)
+    if (entry.isPaid) { // isPaid determined by generateAmortizationSchedule (initial + past/today)
       lastProcessedEntry = entry;
     } else if (!nextPaymentDueDate) {
-      // This is the first unpaid entry, thus the next due date
       nextPaymentDueDate = entry.paymentDate;
     }
   }
   
   if (lastProcessedEntry) {
-      currentBalance = lastProcessedEntry.remainingBalance;
-      paidEMIsSoFarCount = lastProcessedEntry.month;
-      // Recalculate total principal and interest based on *all* entries up to lastProcessedEntry
-      // (or all entries if loan is fully paid through schedule)
-      totalPrincipalPaidToDate = 0;
-      totalInterestPaidToDate = 0;
-      for(let i=0; i < schedule.length; i++){
-          if(i < paidEMIsSoFarCount) {
-            totalPrincipalPaidToDate += schedule[i].principalPaid;
-            totalInterestPaidToDate += schedule[i].interestPaid;
-          }
-      }
-      // Add the initial amountAlreadyPaid as principal paid, if it wasn't purely covering EMIs that are now also summed up.
-      // The schedule itself starts *after* amountAlreadyPaid is conceptually applied via initialPaidEMIs.
-      // So, the principalPaid in the schedule entries + the principal part of amountAlreadyPaid is the total.
-      // generateAmortizationSchedule marks initialPaidEMIs as paid.
-      // The sum of `principalPaid` for these `isPaid` entries is correct.
-      totalPrincipalPaidToDate = loan.principalAmount - currentBalance;
+    currentBalanceFromSchedule = lastProcessedEntry.remainingBalance;
+    paidEMIsSoFarCount = lastProcessedEntry.month;
+    
+    // Sum principal and interest from *all* entries up to the last processed one
+    // This reflects payments made according to the schedule (including initial EMIs)
+    for(let i = 0; i < paidEMIsSoFarCount && i < schedule.length; i++){
+        totalPrincipalScheduledPaid += schedule[i].principalPaid;
+        totalInterestScheduledPaid += schedule[i].interestPaid;
+    }
+  } else {
+    // No EMIs considered paid by the schedule (e.g., all future, no amountAlreadyPaid resulting in initialPaidEMIs > 0)
+    // currentBalanceFromSchedule remains loan.principalAmount (or less if schedule started with reduced principal from prepayments before first EMI)
+    // If the schedule itself accounts for prepayments that reduce the starting balance,
+    // currentBalanceFromSchedule here should be the first entry's (balance + principal_paid).
+     if (schedule.length > 0) {
+        currentBalanceFromSchedule = schedule[0].remainingBalance + schedule[0].principalPaid;
+        nextPaymentDueDate = schedule[0].paymentDate;
+     } else { // Should not happen if schedule has entries
+        currentBalanceFromSchedule = loan.principalAmount;
+     }
+  }
+
+
+  let finalCurrentBalance: number;
+  let finalTotalPrincipalPaid: number;
+  let finalTotalInterestPaid: number = totalInterestScheduledPaid; // Interest paid is based on schedule EMIs
+
+  if (forSummaryView && loan.totalPrepaymentAmount && loan.totalPrepaymentAmount > 0) {
+    // For summary views, adjust the schedule-derived balance by totalPrepaymentAmount
+    finalCurrentBalance = Math.max(0, parseFloat((currentBalanceFromSchedule - loan.totalPrepaymentAmount).toFixed(2)));
+    // Total principal paid for summary is scheduled principal paid + total prepayments
+    finalTotalPrincipalPaid = parseFloat((totalPrincipalScheduledPaid + loan.totalPrepaymentAmount).toFixed(2));
+    finalTotalPrincipalPaid = Math.min(finalTotalPrincipalPaid, loan.principalAmount); // Cap at original loan amount
+    // Adjust balance if total principal paid implies a different figure
+    finalCurrentBalance = parseFloat((loan.principalAmount - finalTotalPrincipalPaid).toFixed(2));
 
   } else {
-    // No EMIs are considered paid yet by the schedule (e.g. all EMIs are in the future, and no amountAlreadyPaid)
-    // Or, amountAlreadyPaid was 0 and all EMIs are future.
-    // currentBalance remains loan.principalAmount (if amountAlreadyPaid was 0)
-    // If loan.amountAlreadyPaid > 0, it reduces initialPaidEMIs which are marked isPaid.
-    // This `else` block should only be hit if initialPaidEMIs is 0 AND all schedule entries are in future.
-    currentBalance = loan.principalAmount;
-    totalPrincipalPaidToDate = 0; // No EMIs paid, no initial amount
-    if (schedule.length > 0) {
-      nextPaymentDueDate = schedule[0].paymentDate;
-    }
+    // For detail page, or if no totalPrepaymentAmount, use schedule-derived values directly
+    // The 'schedule' for detail page is already fully adjusted for individual prepayments.
+    finalCurrentBalance = parseFloat(currentBalanceFromSchedule.toFixed(2));
+    finalTotalPrincipalPaid = parseFloat(totalPrincipalScheduledPaid.toFixed(2));
   }
+  finalCurrentBalance = Math.max(0, finalCurrentBalance); // Ensure not negative
 
-  currentBalance = Math.max(0, parseFloat(currentBalance.toFixed(2)));
-  if (currentBalance === 0 && loan.principalAmount > 0) {
-      totalPrincipalPaidToDate = loan.principalAmount;
-  }
-
-
-  const completedPercentage = loan.principalAmount > 0 ? (totalPrincipalPaidToDate / loan.principalAmount) * 100 : (currentBalance === 0 ? 100:0);
-  const estimatedClosureDate = schedule.length > 0 ? schedule[schedule.length - 1].paymentDate : null;
+  const completedPercentage = loan.principalAmount > 0 
+    ? parseFloat(((finalTotalPrincipalPaid / loan.principalAmount) * 100).toFixed(2)) 
+    : (finalCurrentBalance === 0 ? 100 : 0);
+  
+  const estimatedClosureDate = schedule.length > 0 ? schedule[schedule.length - 1].paymentDate : loan.startDate;
   const remainingEMIsCount = schedule.length - paidEMIsSoFarCount;
 
   return {
-    currentBalance: currentBalance,
-    totalInterestPaid: parseFloat(totalInterestPaidToDate.toFixed(2)),
-    totalPrincipalPaid: parseFloat(totalPrincipalPaidToDate.toFixed(2)),
-    nextDueDate: nextPaymentDueDate,
+    currentBalance: finalCurrentBalance,
+    totalInterestPaid: parseFloat(finalTotalInterestPaid.toFixed(2)),
+    totalPrincipalPaid: parseFloat(finalTotalPrincipalPaid.toFixed(2)),
+    nextDueDate: finalCurrentBalance === 0 ? null : nextPaymentDueDate,
     paidEMIsCount: paidEMIsSoFarCount,
     remainingEMIsCount: remainingEMIsCount < 0 ? 0 : remainingEMIsCount,
-    completedPercentage: parseFloat(completedPercentage.toFixed(2)),
-    estimatedClosureDate: estimatedClosureDate,
+    completedPercentage: completedPercentage > 100 ? 100 : completedPercentage, // Cap at 100
+    estimatedClosureDate: finalCurrentBalance === 0 && lastProcessedEntry ? lastProcessedEntry.paymentDate : estimatedClosureDate,
   };
 }
 
@@ -414,55 +442,82 @@ export function simulatePrepayment(
 
 
   if (prepaymentAfterMonth === 0) {
-    if (currentSchedule.length === 0) { 
-        return [];
+    // Prepaying before the first EMI in the current schedule
+    if (currentSchedule.length === 0) { // Loan is fully paid or has no schedule
+        // If original principal > 0, and prepay clears it
+        if (originalLoanData.principalAmount > 0 && prepaymentAmount >= originalLoanData.principalAmount) {
+            return [{
+                month: 1,
+                paymentDate: originalLoanData.startDate, // Or today's date for simulation
+                payment: originalLoanData.principalAmount,
+                principalPaid: originalLoanData.principalAmount,
+                interestPaid: 0,
+                remainingBalance: 0,
+                isPaid: false, // It's a simulation
+            }];
+        }
+        return []; // No basis for simulation if schedule is empty and not cleared by this prepayment.
     }
     const firstEntry = currentSchedule[0];
+    // Balance before the very first EMI of the current schedule
     balanceBeforeSimulatedPrepayment = firstEntry.remainingBalance + firstEntry.principalPaid; 
     
-    baseSchedulePart = [];
+    baseSchedulePart = []; // No entries from current schedule are kept before this point
+    // Simulation starts from the original loan's start date perspective for schedule generation,
+    // or from the date of first entry minus one month if more appropriate.
     dateForNewSimulatedScheduleStart = formatISO(addMonths(parseISO(firstEntry.paymentDate), -1), {representation: 'date'});
-    emiToUseForSimulation = firstEntry.payment; 
+    emiToUseForSimulation = firstEntry.payment; // Use EMI from current schedule
     
   } else {
+    // Prepaying after a specific EMI in the current schedule
     const paymentEntryBeforePrepayment = currentSchedule[prepaymentAfterMonth - 1];
      if (!paymentEntryBeforePrepayment) {
         console.warn("Cannot find payment entry for simulated prepayment month in current schedule.");
         return [...currentSchedule];
     }
     balanceBeforeSimulatedPrepayment = paymentEntryBeforePrepayment.remainingBalance;
-    baseSchedulePart = currentSchedule.slice(0, prepaymentAfterMonth);
-    dateForNewSimulatedScheduleStart = paymentEntryBeforePrepayment.paymentDate;
-    emiToUseForSimulation = paymentEntryBeforePrepayment.payment;
+    baseSchedulePart = currentSchedule.slice(0, prepaymentAfterMonth); // Keep entries up to this point
+    dateForNewSimulatedScheduleStart = paymentEntryBeforePrepayment.paymentDate; // Next simulated EMI is after this date
+    emiToUseForSimulation = paymentEntryBeforePrepayment.payment; // Use EMI from current schedule
   }
 
+  // If prepayment clears the balance at the point of application
   if (prepaymentAmount >= balanceBeforeSimulatedPrepayment) { 
     if (balanceBeforeSimulatedPrepayment > 0 && baseSchedulePart.length > 0) {
         const lastEntryInBase = baseSchedulePart[baseSchedulePart.length-1];
-        lastEntryInBase.payment += (balanceBeforeSimulatedPrepayment - lastEntryInBase.interestPaid - lastEntryInBase.principalPaid); // adjust payment to cover rest
-        lastEntryInBase.principalPaid = lastEntryInBase.principalPaid + (balanceBeforeSimulatedPrepayment - lastEntryInBase.principalPaid - lastEntryInBase.interestPaid > 0 ? balanceBeforeSimulatedPrepayment - lastEntryInBase.principalPaid - lastEntryInBase.interestPaid : 0 ); // Add remaining part to principal paid
-        lastEntryInBase.remainingBalance = 0;
+        // The prepayment effectively becomes part of the "payment" for the period it's applied in.
+        // Adjusting the last "paid" entry is tricky if it represents an EMI.
+        // It's simpler to consider the prepayment happens, balance becomes 0.
+        // The schedule effectively ends here.
+        // If a visual representation of this simulated prepayment itself is needed, it's more complex.
+        // For now, the schedule just truncates, and the simulation results show interest saved.
+        lastEntryInBase.remainingBalance = 0; // Balance becomes 0 after this point.
+         // Recalculate last payment if needed to clear the exact balance
+        const interestForLastPeriod = lastEntryInBase.interestPaid;
+        const principalToClear = balanceBeforeSimulatedPrepayment - prepaymentAmount > 0 ? 0 : balanceBeforeSimulatedPrepayment; // This needs care
+        // This part is complex, let's simplify: If cleared, the remainingBalance of the last base part entry becomes 0.
+        // The simulation will then show the impact.
     } else if (balanceBeforeSimulatedPrepayment > 0 && baseSchedulePart.length === 0) { 
+        // Prepayment before first EMI clears the loan
          return [{
             month: 1,
-            paymentDate: dateForNewSimulatedScheduleStart, 
-            payment: balanceBeforeSimulatedPrepayment,
+            paymentDate: dateForNewSimulatedScheduleStart, // Or a more representative "prepayment date"
+            payment: balanceBeforeSimulatedPrepayment, // This would be the effective payment
             principalPaid: balanceBeforeSimulatedPrepayment,
-            interestPaid: 0,
+            interestPaid: 0, // Assuming no interest accrued if paid at start
             remainingBalance: 0,
-            isPaid: false, 
+            isPaid: false, // Simulation
         }];
     }
-    // Ensure month numbers are sequential for the base part if it's returned directly
+    // Return the base part, ensuring month numbers are sequential
     return baseSchedulePart.map((entry, index) => ({ ...entry, month: index + 1 }));
   }
   
-  let simulatedBalance = balanceBeforeSimulatedPrepayment - prepaymentAmount;
-  if (simulatedBalance <= 0.01) { 
+  let simulatedBalanceAfterPrepayment = balanceBeforeSimulatedPrepayment - prepaymentAmount;
+  // This check is redundant if the one above handles it, but as a safeguard:
+  if (simulatedBalanceAfterPrepayment <= 0.01) { 
     if (baseSchedulePart.length > 0) {
         const lastEntry = baseSchedulePart[baseSchedulePart.length -1];
-        lastEntry.payment += simulatedBalance > 0 ? simulatedBalance : 0; // Add the remainder to the last payment
-        lastEntry.principalPaid += simulatedBalance > 0 ? simulatedBalance : 0;
         lastEntry.remainingBalance = 0; 
     }
      return baseSchedulePart.map((entry, index) => ({ ...entry, month: index + 1 }));
@@ -470,43 +525,46 @@ export function simulatePrepayment(
 
   const monthlyRate = originalLoanData.interestRate / 100 / 12;
   const newSimulatedSchedulePart: AmortizationEntry[] = [];
-  let currentSimulatedBalanceInLoop = simulatedBalance;
+  let currentSimulatedBalanceInLoop = simulatedBalanceAfterPrepayment;
   let monthsCounter = 0;
-  const maxIterations = originalLoanData.durationMonths * 2; 
+  const maxIterations = originalLoanData.durationMonths * 2; // Safety break
 
   while (currentSimulatedBalanceInLoop > 0.01 && monthsCounter < maxIterations) {
     const interestForMonth = monthlyRate > 0 ? parseFloat((currentSimulatedBalanceInLoop * monthlyRate).toFixed(2)) : 0;
     let principalPaidThisMonth = parseFloat((emiToUseForSimulation - interestForMonth).toFixed(2));
     let actualPaymentThisMonth = emiToUseForSimulation;
 
-    if (principalPaidThisMonth < 0 && monthlyRate > 0) {
+    if (principalPaidThisMonth < 0 && monthlyRate > 0) { // Should not happen if EMI is correctly calculated for positive balance
         principalPaidThisMonth = 0;
     }
 
+    // If current balance is less than the scheduled principal payment for this month (or EMI itself if interest is high)
     if (currentSimulatedBalanceInLoop - principalPaidThisMonth <= 0.01 && currentSimulatedBalanceInLoop > 0) {
-      principalPaidThisMonth = currentSimulatedBalanceInLoop;
+      principalPaidThisMonth = currentSimulatedBalanceInLoop; // Pay off remaining balance
       actualPaymentThisMonth = parseFloat((principalPaidThisMonth + interestForMonth).toFixed(2));
     }
     
     currentSimulatedBalanceInLoop = parseFloat((currentSimulatedBalanceInLoop - principalPaidThisMonth).toFixed(2));
-    currentSimulatedBalanceInLoop = Math.max(0, currentSimulatedBalanceInLoop);
+    currentSimulatedBalanceInLoop = Math.max(0, currentSimulatedBalanceInLoop); // Ensure balance doesn't go negative
     
+    // Payment date for this new simulated EMI
     const paymentDate = formatISO(addMonths(parseISO(dateForNewSimulatedScheduleStart), monthsCounter + 1), { representation: 'date' });
     
     newSimulatedSchedulePart.push({
-      month: baseSchedulePart.length + monthsCounter + 1,
+      month: baseSchedulePart.length + monthsCounter + 1, // Sequential month number
       paymentDate: paymentDate,
       payment: actualPaymentThisMonth,
       principalPaid: principalPaidThisMonth,
       interestPaid: interestForMonth,
       remainingBalance: currentSimulatedBalanceInLoop,
-      isPaid: false, 
+      isPaid: false, // Simulated entries are not 'paid' in reality
     });
     monthsCounter++;
     if (currentSimulatedBalanceInLoop <= 0.01) break;
   }
   
   const finalSchedule = [...baseSchedulePart, ...newSimulatedSchedulePart];
+  // Ensure month numbers are sequential for the entire combined schedule
   return finalSchedule.map((entry, index) => ({...entry, month: index + 1}));
 }
 
@@ -517,7 +575,7 @@ export function simulatePrepayment(
  * @returns The total interest paid.
  */
 export function calculateTotalInterest(schedule: AmortizationEntry[]): number {
-  if (!schedule) return 0;
+  if (!schedule || schedule.length === 0) return 0;
   return schedule.reduce((total, entry) => total + entry.interestPaid, 0);
 }
 

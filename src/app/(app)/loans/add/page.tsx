@@ -1,3 +1,4 @@
+
 'use client';
 
 import { LoanForm } from '@/components/loans/LoanForm';
@@ -28,6 +29,7 @@ export default function AddLoanPage() {
       const loanPayload = {
         ...processedData,
         userId: user.uid,
+        totalPrepaymentAmount: 0, // Initialize totalPrepaymentAmount
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };

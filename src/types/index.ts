@@ -22,6 +22,7 @@ export interface Loan {
   durationMonths: number; // Original loan term in months
   startDate: string; // Original start date of the loan (ISO string)
   amountAlreadyPaid: number; // Amount already paid (defaults to 0 if not provided)
+  totalPrepaymentAmount?: number; // Sum of all recorded prepayments for this loan
   
   // Optional: Store calculated EMI if it's fixed.
   // monthlyEMI?: number; 
@@ -81,3 +82,4 @@ export interface RecordedPrepayment {
   notes?: string;
   createdAt: Timestamp; // Firestore server timestamp
 }
+

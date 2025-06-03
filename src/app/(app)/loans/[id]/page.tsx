@@ -36,6 +36,8 @@ import {
   query,
   orderBy,
   onSnapshot,
+  updateDoc,
+  increment,
 } from 'firebase/firestore';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -146,13 +148,38 @@ export default function LoanDetailPage() {
 
   useEffect(() => {
     if (loanIdString && user) {
-      fetchLoan(loanIdString);
+      // Listen for real-time updates to the loan document itself
+      // This is important for totalPrepaymentAmount updates
+      const loanDocRef = doc(db, `users/${user.uid}/loans`, loanIdString);
+      const unsubscribeLoan = onSnapshot(loanDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          setLoan({ id: docSnap.id, ...docSnap.data() } as Loan);
+        } else {
+          toast({ title: 'Error', description: 'Loan not found or was deleted.', variant: 'destructive' });
+          router.push('/loans');
+        }
+        setLoading(false);
+      }, (error) => {
+        console.error('Error fetching loan snapshot:', error);
+        toast({ title: 'Error', description: 'Failed to listen for loan updates.', variant: 'destructive' });
+        setLoading(false);
+      });
+      
+      // setLoading(false) is handled by the onSnapshot callback now
+      // Original fetchLoan is removed to avoid duplicate fetching if onSnapshot handles initial load.
+      // However, onSnapshot might not fire immediately if data is cached.
+      // A one-time getDoc might still be useful for initial load speed, then rely on onSnapshot.
+      // For simplicity here, relying on onSnapshot for updates and initial load.
+      // If initial load is slow, could re-introduce a getDoc then unsubscribeLoan on change.
+
+      return () => unsubscribeLoan();
+
     } else if (!user && loanIdString) {
        setLoading(true);
     } else {
       setLoading(false);
     }
-  }, [loanIdString, user, fetchLoan]);
+  }, [loanIdString, user, toast, router]); // fetchLoan removed from dependencies for now
 
   useEffect(() => {
     if (!user || !loanIdString) {
@@ -202,7 +229,8 @@ export default function LoanDetailPage() {
   
   const loanStatus: LoanStatus | null = useMemo(() => {
     if (!loan || !currentAmortizationSchedule) return null; 
-    return getLoanStatus(loan, currentAmortizationSchedule);
+    // For detail page, forSummaryView is false (or omitted, defaulting to false)
+    return getLoanStatus(loan, currentAmortizationSchedule, false);
   }, [loan, currentAmortizationSchedule]);
 
 
@@ -213,15 +241,23 @@ export default function LoanDetailPage() {
     if (currentAmortizationSchedule) { 
       currentAmortizationSchedule.forEach(entry => {
         try {
-          options.push({
-            value: entry.month.toString(),
-            label: `After EMI ${entry.month} (${format(parseISO(entry.paymentDate), 'MMM yyyy')})`
-          });
+          // Ensure entry.paymentDate is valid before parsing
+          if(entry.paymentDate && typeof entry.paymentDate === 'string'){
+            options.push({
+              value: entry.month.toString(),
+              label: `After EMI ${entry.month} (${format(parseISO(entry.paymentDate), 'MMM yyyy')})`
+            });
+          } else {
+             options.push({
+              value: entry.month.toString(),
+              label: `After EMI ${entry.month} (Invalid Date)`
+            });
+          }
         } catch (e) {
           console.error("Error formatting date for prepayment option:", entry.paymentDate, e);
           options.push({
             value: entry.month.toString(),
-            label: `After EMI ${entry.month} (Invalid Date)`
+            label: `After EMI ${entry.month} (Error in Date)`
           });
         }
       });
@@ -243,6 +279,13 @@ export default function LoanDetailPage() {
         notes: data.notes || '',
         createdAt: serverTimestamp(),
       });
+
+      // Atomically update totalPrepaymentAmount on the loan document
+      const loanDocRef = doc(db, `users/${user.uid}/loans`, loanIdString);
+      await updateDoc(loanDocRef, {
+        totalPrepaymentAmount: increment(data.amount)
+      });
+
       toast({ title: 'Success', description: 'Prepayment recorded successfully!' });
       setIsRecordPrepaymentDialogOpen(false);
     } catch (error) {
@@ -309,13 +352,18 @@ export default function LoanDetailPage() {
 
     let principalAtPrepaymentTime: number;
     if (afterMonth === 0) {
+        // Prepaying before the first EMI in the current schedule
+        // The balance is the starting balance of the *current* schedule's first entry
         if (currentAmortizationSchedule.length > 0) {
             const firstEntry = currentAmortizationSchedule[0];
+            // The balance before the first EMI payment is (remainingBalance of first entry + principalPaid of first entry)
             principalAtPrepaymentTime = firstEntry.remainingBalance + firstEntry.principalPaid; 
         } else { 
+            // This case should ideally not happen if loan is active. If schedule is empty, implies loan is paid off.
             principalAtPrepaymentTime = 0;
         }
     } else {
+        // Prepaying after a specific EMI in the current schedule
         const entryBeforePrepayment = currentAmortizationSchedule[afterMonth -1];
         if(!entryBeforePrepayment) {
             toast({title: "Error", description: "Invalid month for prepayment in current schedule.", variant: "destructive"});
@@ -329,12 +377,12 @@ export default function LoanDetailPage() {
         toast({ title: "Loan Cleared", description: "Loan balance is already zero or negative at the selected point in the current schedule.", variant: "default" });
         const scheduleToUse = afterMonth === 0 ? [] : currentAmortizationSchedule.slice(0, afterMonth);
         setSimulationResults({
-            newClosureDate: scheduleToUse[scheduleToUse.length-1]?.paymentDate || loan.startDate,
+            newClosureDate: scheduleToUse.length > 0 && scheduleToUse[scheduleToUse.length-1]?.paymentDate ? scheduleToUse[scheduleToUse.length-1]?.paymentDate : loan.startDate,
             interestSaved: 0,
             originalTotalInterest: calculateTotalInterest(currentAmortizationSchedule),
             newTotalInterest: calculateTotalInterest(scheduleToUse),
             simulatedSchedule: scheduleToUse,
-            oldClosureDate: currentAmortizationSchedule[currentAmortizationSchedule.length-1]?.paymentDate || null,
+            oldClosureDate: currentAmortizationSchedule.length > 0 && currentAmortizationSchedule[currentAmortizationSchedule.length-1]?.paymentDate ? currentAmortizationSchedule[currentAmortizationSchedule.length-1]?.paymentDate : null,
         });
         setIsSimulating(false);
         return;
@@ -357,7 +405,7 @@ export default function LoanDetailPage() {
     }
 
     const simulatedSchedule = simulatePrepayment(
-      loan, 
+      loan, // Pass the base loan object
       currentAmortizationSchedule,
       prepaymentAmountValue,
       afterMonth
@@ -367,8 +415,8 @@ export default function LoanDetailPage() {
     const newTotalInterest = calculateTotalInterest(simulatedSchedule);
     const interestSaved = parseFloat((originalTotalInterest - newTotalInterest).toFixed(2));
     
-    const newClosureDate = simulatedSchedule.length > 0 ? simulatedSchedule[simulatedSchedule.length - 1].paymentDate : (currentAmortizationSchedule[0]?.paymentDate || null) ;
-    const oldClosureDate = currentAmortizationSchedule.length > 0 ? currentAmortizationSchedule[currentAmortizationSchedule.length - 1].paymentDate : null;
+    const newClosureDate = simulatedSchedule.length > 0 && simulatedSchedule[simulatedSchedule.length - 1].paymentDate ? simulatedSchedule[simulatedSchedule.length - 1].paymentDate : (currentAmortizationSchedule.length > 0 && currentAmortizationSchedule[0]?.paymentDate ? currentAmortizationSchedule[0]?.paymentDate : null) ;
+    const oldClosureDate = currentAmortizationSchedule.length > 0 && currentAmortizationSchedule[currentAmortizationSchedule.length - 1].paymentDate ? currentAmortizationSchedule[currentAmortizationSchedule.length - 1].paymentDate : null;
 
     setSimulationResults({
       newClosureDate,
@@ -520,7 +568,7 @@ export default function LoanDetailPage() {
              <ListChecks className="mr-2 h-5 w-5 text-accent" />
             Recorded Prepayments
           </CardTitle>
-          <CardDescription>History of prepayments made for this loan. These are factored into the loan details and schedule above.</CardDescription>
+          <CardDescription>History of prepayments made for this loan. These are factored into the loan details and schedule above. Total: {formatCurrency(loan.totalPrepaymentAmount || 0)}</CardDescription>
         </CardHeader>
         <CardContent>
           {loadingPrepayments ? (

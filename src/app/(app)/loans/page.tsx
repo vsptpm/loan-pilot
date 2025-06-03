@@ -26,8 +26,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle as UIDialogTitle, // Renamed to avoid conflict with CardTitle
-  AlertDialogTrigger, // Added AlertDialogTrigger here
+  AlertDialogTitle as UIDialogTitle, 
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { NoLoansFoundIllustration } from '@/components/illustrations/NoLoansFoundIllustration';
@@ -71,7 +71,7 @@ export default function LoansPage() {
     const q = query(loansCol, orderBy('createdAt', 'desc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const userLoans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Loan));
+      const userLoans = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Loan));
       setLoans(userLoans);
       setIsLoading(false);
     }, (error) => {
@@ -91,9 +91,9 @@ export default function LoansPage() {
     return loansToProcess.map(loan => {
       const monthlyEMI = calculateEMI(loan.principalAmount, loan.interestRate, loan.durationMonths);
       const initialPaidEMIs = getInitialPaidEMIsCount(loan.amountAlreadyPaid, monthlyEMI);
-      // IMPORTANT: Loan list summaries DO NOT fetch/use recordedPrepayments for individual loans here for performance.
-      // The schedule generated here is based on original terms + amountAlreadyPaid only.
-      const schedule = generateAmortizationSchedule(
+      
+      // For loan list summary, generate a BASIC schedule WITHOUT individual prepayments
+      const basicSchedule = generateAmortizationSchedule(
         loan.principalAmount,
         loan.interestRate,
         loan.durationMonths,
@@ -101,14 +101,15 @@ export default function LoansPage() {
         initialPaidEMIs
         // No recordedPrepayments passed here
       );
-      const status = getLoanStatus(loan, schedule);
+      // Pass forSummaryView: true to getLoanStatus
+      const status = getLoanStatus(loan, basicSchedule, true);
 
       return {
         id: loan.id,
         name: loan.name,
         interestRate: loan.interestRate,
         monthlyEMI: monthlyEMI,
-        currentPrincipal: status.currentBalance,
+        currentPrincipal: status.currentBalance, // Adjusted by totalPrepaymentAmount in getLoanStatus
         completedPercentage: status.completedPercentage,
         nextDueDate: status.nextDueDate,
       };
@@ -118,9 +119,8 @@ export default function LoansPage() {
   const handleDeleteLoan = async (loanId: string) => {
     if (!user) return;
     try {
-      // Optional: Delete subcollections like 'prepayments' if they exist and you want a full cleanup
-      // This needs to be handled carefully, possibly with a Firebase Function for robustness.
-      // For now, just deleting the loan document.
+      // TODO: Consider deleting subcollections like 'prepayments' if they exist.
+      // This might require a Firebase Function for robust, recursive deletion.
       await deleteDoc(doc(db, `users/${user.uid}/loans`, loanId));
       toast({ title: "Success", description: "Loan deleted successfully." });
     } catch (error) {
@@ -149,14 +149,13 @@ export default function LoansPage() {
         </Link>
       </div>
 
-      {loanDisplayData.length > 0 && !searchQuery && (
+      {loanDisplayData.length > 0 && ( // Show alert only if there are loans to display
          <Alert className="mb-6 shadow-md">
           <Info className="h-4 w-4" />
           <AlertTitle>Loan Card Information</AlertTitle>
           <AlertDescription>
-            The loan summaries displayed on this page are based on original loan terms and any &apos;amount already paid&apos; at the start.
-            They do not yet reflect individually recorded prepayments. For the most up-to-date figures including all prepayments,
-            please click on a loan card to view its specific detail page.
+            Loan summaries reflect original terms, initial payments, and total recorded prepayments. 
+            For a detailed breakdown including exact interest savings from individual prepayments, please click on a loan card to view its specific detail page.
           </AlertDescription>
         </Alert>
       )}
@@ -291,3 +290,4 @@ export default function LoansPage() {
     </div>
   );
 }
+

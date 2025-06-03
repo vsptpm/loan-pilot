@@ -40,9 +40,9 @@ interface DashboardLoanSummary {
   monthlyEMI: number;
   completedPercentage: number;
   nextDueDate: string | null;
-  originalLoan: Loan;
+  originalLoan: Loan; // Keep original loan to access totalPrepaymentAmount if needed
   status: LoanStatus;
-  schedule: AmortizationEntry[];
+  // schedule: AmortizationEntry[]; // Schedule not needed for dashboard summary card itself if status has all
 }
 
 
@@ -81,26 +81,30 @@ export default function DashboardPage() {
     return loans.map(loan => {
       const monthlyEMI = calculateEMI(loan.principalAmount, loan.interestRate, loan.durationMonths);
       const initialPaidEMIs = getInitialPaidEMIsCount(loan.amountAlreadyPaid, monthlyEMI);
-      const schedule = generateAmortizationSchedule(
+      
+      // For dashboard summary, generate a BASIC schedule WITHOUT individual prepayments
+      const basicSchedule = generateAmortizationSchedule(
         loan.principalAmount,
         loan.interestRate,
         loan.durationMonths,
         loan.startDate,
         initialPaidEMIs
+        // DO NOT pass recordedPrepayments array here for performance
       );
-      const status = getLoanStatus(loan, schedule);
+      // Pass forSummaryView: true to getLoanStatus
+      const status = getLoanStatus(loan, basicSchedule, true); 
       
       return {
         id: loan.id,
         name: loan.name,
-        currentPrincipal: status.currentBalance,
+        currentPrincipal: status.currentBalance, // This will be adjusted by totalPrepaymentAmount inside getLoanStatus
         interestRate: loan.interestRate,
         monthlyEMI: monthlyEMI,
         completedPercentage: status.completedPercentage,
         nextDueDate: status.nextDueDate,
         originalLoan: loan,
         status: status,
-        schedule: schedule,
+        // schedule: basicSchedule, // Not strictly needed for the summary card if status is comprehensive
       };
     });
   }, [loans]);
@@ -109,7 +113,7 @@ export default function DashboardPage() {
     if (loanSummaries.length === 0) {
       return {
         totalBorrowed: 0,
-        totalRepaidSoFar: 0,
+        totalRepaidSoFar: 0, // This will use status.totalPrincipalPaid which includes totalPrepayments
         averageInterestRate: 0,
         overallProgressPercentage: 0,
         nextActionMessage: "Add your first loan to see next actions.",
@@ -117,14 +121,25 @@ export default function DashboardPage() {
     }
 
     const totalBorrowed = loanSummaries.reduce((sum, s) => sum + s.originalLoan.principalAmount, 0);
-    const totalRepaidSoFar = loanSummaries.reduce((sum,s) => sum + s.status.totalPrincipalPaid, 0); // Uses totalPrincipalPaid from status
+    // status.totalPrincipalPaid from getLoanStatus(..., ..., true) already includes totalPrepaymentAmount
+    const totalRepaidSoFar = loanSummaries.reduce((sum,s) => sum + s.status.totalPrincipalPaid, 0); 
     const totalInterestRateSum = loanSummaries.reduce((sum, s) => sum + s.interestRate, 0);
     const averageInterestRate = loanSummaries.length > 0 ? totalInterestRateSum / loanSummaries.length : 0;
+    
+    // overallProgressPercentage should also use the updated totalRepaidSoFar
     const overallProgressPercentage = totalBorrowed > 0 ? (totalRepaidSoFar / totalBorrowed) * 100 : 0;
 
     const activeLoansWithDueDates = loanSummaries
       .filter(s => s.nextDueDate && s.currentPrincipal > 0)
-      .sort((a, b) => parseISO(a.nextDueDate!).getTime() - parseISO(b.nextDueDate!).getTime());
+      .sort((a, b) => {
+        // Ensure nextDueDate is not null before parsing
+        if (!a.nextDueDate || !b.nextDueDate) return 0;
+        try {
+            return parseISO(a.nextDueDate).getTime() - parseISO(b.nextDueDate).getTime();
+        } catch {
+            return 0; // Handle invalid date strings if they occur
+        }
+      });
 
     let nextActionMessage;
     if (activeLoansWithDueDates.length > 0) {
@@ -256,9 +271,8 @@ export default function DashboardPage() {
           <Info className="h-4 w-4" />
           <AlertTitle>Loan Summary Information</AlertTitle>
           <AlertDescription>
-            The loan summaries and overall statistics displayed on this dashboard are based on original loan terms and any &apos;amount already paid&apos; at the start.
-            They do not yet reflect individually recorded prepayments. For the most up-to-date figures including all prepayments,
-            please view the specific loan&apos;s detail page.
+            Loan summaries and overall statistics reflect original terms, initial payments, and total recorded prepayments. 
+            For a detailed breakdown including exact interest savings from individual prepayments, please view the specific loan&apos;s detail page.
           </AlertDescription>
         </Alert>
       )}
@@ -340,3 +354,4 @@ export default function DashboardPage() {
     
 
     
+
