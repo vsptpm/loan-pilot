@@ -50,7 +50,7 @@ import {
   calculateEMI,
   getLoanStatus
 } from '@/lib/loanUtils';
-import { LineChart as LineChartIcon, BarChart3 as BarChartIcon, Loader2, TrendingUp, Calculator, ChevronsUpDown, Check, Edit3, Landmark as RecordIcon, ListChecks, Trash2 } from 'lucide-react';
+import { LineChart as LineChartIcon, BarChart3 as BarChartIcon, Loader2, TrendingUp, Calculator, ChevronsUpDown, Check, Edit3, Landmark as RecordIcon, ListChecks, Trash2, CircleDollarSign, Repeat, Wallet } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -95,6 +95,8 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { parseISO, format, formatISO, isBefore, isEqual, isAfter } from 'date-fns';
+import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 
 
 interface SimulationResults {
@@ -205,7 +207,7 @@ export default function LoanDetailPage() {
   
   const loanStatus: LoanStatus | null = useMemo(() => {
     if (!loan || !currentAmortizationSchedule) return null; 
-    return getLoanStatus(loan, currentAmortizationSchedule, false);
+    return getLoanStatus(loan, currentAmortizationSchedule, false); // false for detail view (accurate calculation)
   }, [loan, currentAmortizationSchedule]);
 
 
@@ -499,12 +501,52 @@ export default function LoanDetailPage() {
           </div>
           <CardDescription>Detailed overview of your loan, reflecting all recorded prepayments. Assumes on-time EMI payments up to today.</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Original Principal Amount:</span>
-                  <span className="font-medium">{formatCurrency(loan.principalAmount)}</span>
-                </div>
+        <CardContent className="space-y-6">
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="shadow-md rounded-xl">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Original Principal</CardTitle>
+                  <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(loan.principalAmount)}</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-md rounded-xl">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Scheduled Monthly EMI</CardTitle>
+                  <Repeat className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(monthlyEMI)}</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-md rounded-xl">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Outstanding Balance</CardTitle>
+                  <Wallet className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(loanStatus.currentBalance)}</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-md rounded-xl">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">EMIs Paid</CardTitle>
+                  <ListChecks className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{loanStatus.paidEMIsCount} / {currentAmortizationSchedule.length || loan.durationMonths}</div>
+                   <p className="text-xs text-muted-foreground">
+                    out of {currentAmortizationSchedule.length || loan.durationMonths} total EMIs
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Separator />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Annual Interest Rate:</span>
                   <span className="font-medium">{loan.interestRate}%</span>
@@ -513,43 +555,32 @@ export default function LoanDetailPage() {
                   <span className="text-muted-foreground">Original Loan Term:</span>
                   <span className="font-medium">{loan.durationMonths} months</span>
                 </div>
-                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount Initially Paid (lumpsum):</span>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount Initially Paid (Lumpsum):</span>
                   <span className="font-medium">{formatCurrency(loan.amountAlreadyPaid)}</span>
                 </div>
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">Outstanding Balance (as of today):</span>
-                    <span className="font-medium">{formatCurrency(loanStatus.currentBalance)}</span>
-                </div>
-                 <div className="flex justify-between">
-                    <span className="text-muted-foreground">EMIs Paid:</span>
-                    <span className="font-medium">{loanStatus.paidEMIsCount} / {currentAmortizationSchedule.length}</span>
-                </div>
-            </div>
-            <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Loan Start Date:</span>
                   <span className="font-medium">{formatDate(loan.startDate)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Scheduled Monthly EMI:</span>
-                  <span className="font-medium">{formatCurrency(monthlyEMI)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Principal Paid (as of today):</span>
+                  <span className="text-muted-foreground">Total Principal Paid (to date):</span>
                   <span className="font-medium">{formatCurrency(loanStatus.totalPrincipalPaid)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Interest Paid (as of today):</span>
+                  <span className="text-muted-foreground">Total Interest Paid (to date):</span>
                   <span className="font-medium">{formatCurrency(loanStatus.totalInterestPaid)}</span>
                 </div>
-                 <div className="flex justify-between">
-                    <span className="text-muted-foreground">Next Scheduled Payment:</span>
-                    <span className="font-medium">{loanStatus.nextDueDate ? formatDate(loanStatus.nextDueDate) : (loanStatus.currentBalance === 0 ? 'Paid Off' : 'N/A')}</span>
-                </div>
                 <div className="flex justify-between">
-                    <span className="text-muted-foreground">Progress (as of today):</span>
-                    <span className="font-medium">{loanStatus.completedPercentage.toFixed(2)}%</span>
+                    <span className="text-muted-foreground">Next Scheduled Payment:</span>
+                    <span className="font-medium">{loanStatus.nextDueDate ? formatDate(loanStatus.nextDueDate) : (loanStatus.currentBalance <= 0.01 ? 'Paid Off' : 'N/A')}</span>
+                </div>
+                 <div className="md:col-span-2"> {/* Progress bar spans full width on medium and up */}
+                    <div className="flex justify-between mb-1">
+                        <span className="text-muted-foreground">Overall Progress (to date):</span>
+                        <span className="font-medium">{loanStatus.completedPercentage.toFixed(2)}%</span>
+                    </div>
+                    <Progress value={loanStatus.completedPercentage} className="h-2.5" />
                 </div>
             </div>
         </CardContent>
@@ -871,4 +902,3 @@ export default function LoanDetailPage() {
     </div>
   );
 }
-
