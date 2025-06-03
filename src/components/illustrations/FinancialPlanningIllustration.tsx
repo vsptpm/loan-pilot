@@ -13,16 +13,7 @@ export function FinancialPlanningIllustration(props: SVGProps<SVGSVGElement>) {
       {...props}
     >
       <title id="financialPlanningTitleAlt">Illustration representing financial growth with a piggy bank, coins, and an upward arrow</title>
-      {/* Background */}
-      <rect width="300" height="200" fill="hsl(var(--background))" />
-
-      {/* Subtle background pattern (optional, e.g., light grid) */}
-      <defs>
-        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="hsl(var(--muted) / 0.3)" strokeWidth="0.5"/>
-        </pattern>
-      </defs>
-      <rect width="300" height="200" fill="url(#grid)" opacity="0.5" />
+      {/* Background elements removed for transparency */}
 
       {/* Piggy Bank */}
       <path 
