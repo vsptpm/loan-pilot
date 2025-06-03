@@ -24,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/hooks/useAuth';
-import type { Loan, AmortizationEntry } from '@/types';
+import type { Loan, AmortizationEntry, LoanStatus } from '@/types';
 import { db } from '@/lib/firebase';
 import {
   doc,
@@ -37,6 +37,8 @@ import {
   simulatePrepayment,
   calculateTotalInterest,
   getInitialPaidEMIsCount,
+  calculateEMI,
+  getLoanStatus
 } from '@/lib/loanUtils';
 import { LineChart as LineChartIcon, BarChart3 as BarChartIcon, Loader2, TrendingUp, Calculator, ChevronsUpDown, Check, Edit3 } from 'lucide-react';
 import {
@@ -131,17 +133,37 @@ export default function LoanDetailPage() {
     }
   }, [id, user, fetchLoan]);
 
+  const monthlyEMI = useMemo(() => {
+    if (!loan) return 0;
+    return calculateEMI(loan.principalAmount, loan.interestRate, loan.durationMonths);
+  }, [loan]);
+
+  const initialPaidEMIsCount = useMemo(() => {
+      if (!loan || monthlyEMI === 0) return 0;
+      return getInitialPaidEMIsCount(loan.amountAlreadyPaid, monthlyEMI);
+  }, [loan, monthlyEMI]);
+
   const originalSchedule: AmortizationEntry[] = useMemo(() => {
     if (!loan) return [];
-    const initialPaidEMIs = getInitialPaidEMIsCount(loan.amountAlreadyPaid, 0); 
     return generateRepaymentSchedule(
-      loan.principalAmount - (initialPaidEMIs > 0 ? 0 : loan.amountAlreadyPaid), 
+      loan.principalAmount,
       loan.interestRate,
       loan.durationMonths,
       loan.startDate,
-      initialPaidEMIs
+      initialPaidEMIsCount
     );
-  }, [loan]);
+  }, [loan, initialPaidEMIsCount]);
+  
+  const loanStatus: LoanStatus | null = useMemo(() => {
+    if (!loan || !originalSchedule || originalSchedule.length === 0) {
+        if(loan) { // Fallback for loans with no schedule (e.g. 0 duration, or just amountAlreadyPaid)
+            return getLoanStatus(loan, []); // getLoanStatus handles empty schedule
+        }
+        return null;
+    }
+    return getLoanStatus(loan, originalSchedule);
+  }, [loan, originalSchedule]);
+
 
   const prepaymentMonthOptions = useMemo(() => {
     const options = [
@@ -347,27 +369,43 @@ export default function LoanDetailPage() {
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
                 <div className="flex justify-between">
-                <span className="text-muted-foreground">Principal Amount:</span>
-                <span className="font-medium">{formatCurrency(loan.principalAmount)}</span>
+                  <span className="text-muted-foreground">Principal Amount:</span>
+                  <span className="font-medium">{formatCurrency(loan.principalAmount)}</span>
                 </div>
                 <div className="flex justify-between">
-                <span className="text-muted-foreground">Annual Interest Rate:</span>
-                <span className="font-medium">{loan.interestRate}%</span>
+                  <span className="text-muted-foreground">Annual Interest Rate:</span>
+                  <span className="font-medium">{loan.interestRate}%</span>
                 </div>
                 <div className="flex justify-between">
-                <span className="text-muted-foreground">Loan Term:</span>
-                <span className="font-medium">{loan.durationMonths} months</span>
+                  <span className="text-muted-foreground">Loan Term:</span>
+                  <span className="font-medium">{loan.durationMonths} months</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount Initially Paid:</span>
+                  <span className="font-medium">{formatCurrency(loan.amountAlreadyPaid)}</span>
                 </div>
             </div>
             <div className="space-y-3">
                 <div className="flex justify-between">
-                <span className="text-muted-foreground">Start Date:</span>
-                <span className="font-medium">{formatDate(loan.startDate)}</span>
+                  <span className="text-muted-foreground">Start Date:</span>
+                  <span className="font-medium">{formatDate(loan.startDate)}</span>
                 </div>
                 <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount Initially Paid:</span>
-                <span className="font-medium">{formatCurrency(loan.amountAlreadyPaid)}</span>
+                  <span className="text-muted-foreground">Monthly EMI:</span>
+                  <span className="font-medium">{formatCurrency(monthlyEMI)}</span>
                 </div>
+                {loanStatus && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total Principal Repaid:</span>
+                      <span className="font-medium">{formatCurrency(loanStatus.totalPrincipalPaid)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total Interest Paid:</span>
+                      <span className="font-medium">{formatCurrency(loanStatus.totalInterestPaid)}</span>
+                    </div>
+                  </>
+                )}
             </div>
         </CardContent>
       </Card>
@@ -610,6 +648,3 @@ export default function LoanDetailPage() {
     </div>
   );
 }
-
-
-    
