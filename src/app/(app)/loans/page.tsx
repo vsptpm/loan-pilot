@@ -4,10 +4,10 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
-import type { Loan } from '@/types';
+import type { Loan, AmortizationEntry } from '@/types'; // Added AmortizationEntry
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import { PlusCircle, Edit3, Trash2, Eye, Landmark, Percent, CalendarDays, CircleDollarSign, MoreVertical, Loader2, SearchX } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, Eye, MoreVertical, Loader2, SearchX } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -31,6 +31,24 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { NoLoansFoundIllustration } from '@/components/illustrations/NoLoansFoundIllustration';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress'; // Added Progress
+import {
+  calculateEMI,
+  generateAmortizationSchedule,
+  getLoanStatus,
+  getInitialPaidEMIsCount,
+  type LoanStatus,
+} from '@/lib/loanUtils'; // Added loan utils
+
+interface LoanDisplaySummary {
+  id: string;
+  name: string;
+  interestRate: number;
+  monthlyEMI: number;
+  currentPrincipal: number;
+  completedPercentage: number;
+  nextDueDate: string | null;
+}
 
 export default function LoansPage() {
   const { user } = useAuth();
@@ -64,13 +82,33 @@ export default function LoansPage() {
     return () => unsubscribe();
   }, [user, toast]);
 
-  const filteredLoans = useMemo(() => {
-    if (!searchQuery) {
-      return loans;
-    }
-    return loans.filter(loan =>
-      loan.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const loanDisplayData = useMemo((): LoanDisplaySummary[] => {
+    const loansToProcess = searchQuery
+      ? loans.filter(loan => loan.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      : loans;
+
+    return loansToProcess.map(loan => {
+      const monthlyEMI = calculateEMI(loan.principalAmount, loan.interestRate, loan.durationMonths);
+      const initialPaidEMIs = getInitialPaidEMIsCount(loan.amountAlreadyPaid, monthlyEMI);
+      const schedule = generateAmortizationSchedule(
+        loan.principalAmount,
+        loan.interestRate,
+        loan.durationMonths,
+        loan.startDate,
+        initialPaidEMIs
+      );
+      const status = getLoanStatus(loan, schedule);
+
+      return {
+        id: loan.id,
+        name: loan.name,
+        interestRate: loan.interestRate,
+        monthlyEMI: monthlyEMI,
+        currentPrincipal: status.currentBalance,
+        completedPercentage: status.completedPercentage,
+        nextDueDate: status.nextDueDate,
+      };
+    });
   }, [loans, searchQuery]);
 
   const handleDeleteLoan = async (loanId: string) => {
@@ -86,8 +124,9 @@ export default function LoansPage() {
   
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-4 text-lg">Loading loans...</p>
       </div>
     );
   }
@@ -121,7 +160,7 @@ export default function LoansPage() {
             </Link>
           </CardContent>
         </Card>
-      ) : filteredLoans.length === 0 && searchQuery ? (
+      ) : loanDisplayData.length === 0 && searchQuery ? (
         <Card className="w-full shadow-lg">
           <CardHeader>
             <CardTitle className="font-headline text-2xl">No Loans Match Your Search</CardTitle>
@@ -136,74 +175,81 @@ export default function LoansPage() {
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredLoans.map((loan) => (
-            <Card key={loan.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
+          {loanDisplayData.map((loanSummary) => (
+            <Card key={loanSummary.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
               <CardHeader>
                 <div className="flex justify-between items-start">
-                  <CardTitle className="font-headline text-xl">{loan.name}</CardTitle>
-                  <AlertDialog>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <Link href={`/loans/${loan.id}`} passHref legacyBehavior>
-                          <DropdownMenuItem><Eye className="mr-2 h-4 w-4" />View Details</DropdownMenuItem>
-                        </Link>
-                        <Link href={`/loans/edit/${loan.id}`} passHref legacyBehavior>
-                         <DropdownMenuItem><Edit3 className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                        </Link>
-                        <AlertDialogTrigger asChild>
-                          <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                            <Trash2 className="mr-2 h-4 w-4" />Delete
-                          </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete the loan "{loan.name}" and all its associated data.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDeleteLoan(loan.id)} className="bg-destructive hover:bg-destructive/90">
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Link href={`/loans/${loanSummary.id}`} passHref legacyBehavior>
+                    <a className="flex-grow mr-2">
+                      <CardTitle className="font-headline text-xl hover:underline">{loanSummary.name}</CardTitle>
+                    </a>
+                  </Link>
+                  <div className="flex items-center flex-shrink-0">
+                    <span className="text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary mr-2 whitespace-nowrap">
+                      {loanSummary.interestRate}% APR
+                    </span>
+                    <AlertDialog>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <Link href={`/loans/${loanSummary.id}`} passHref legacyBehavior>
+                            <DropdownMenuItem><Eye className="mr-2 h-4 w-4" />View Details</DropdownMenuItem>
+                          </Link>
+                          <Link href={`/loans/edit/${loanSummary.id}`} passHref legacyBehavior>
+                           <DropdownMenuItem><Edit3 className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                          </Link>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                              <Trash2 className="mr-2 h-4 w-4" />Delete
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the loan "{loanSummary.name}" and all its associated data.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteLoan(loanSummary.id)} className="bg-destructive hover:bg-destructive/90">
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
+                <CardDescription>
+                  Next payment due: {loanSummary.nextDueDate ? formatDate(loanSummary.nextDueDate) : 'N/A'}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2 flex-grow">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <CircleDollarSign className="mr-2 h-4 w-4 text-primary" />
-                  Principal: <span className="ml-1 font-medium text-foreground">{formatCurrency(loan.principalAmount)}</span>
-                </div>
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Percent className="mr-2 h-4 w-4 text-primary" />
-                  Interest Rate: <span className="ml-1 font-medium text-foreground">{loan.interestRate}%</span>
-                </div>
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <CalendarDays className="mr-2 h-4 w-4 text-primary" />
-                  Term: <span className="ml-1 font-medium text-foreground">{loan.durationMonths} months</span>
-                </div>
-                 <div className="flex items-center text-sm text-muted-foreground">
-                  <Landmark className="mr-2 h-4 w-4 text-primary" />
-                  Start Date: <span className="ml-1 font-medium text-foreground">{formatDate(loan.startDate)}</span>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Link href={`/loans/${loan.id}`} legacyBehavior passHref>
-                  <Button variant="outline" className="w-full">
-                    <Eye className="mr-2 h-4 w-4" /> View Details
-                  </Button>
-                </Link>
-              </CardFooter>
+              <Link href={`/loans/${loanSummary.id}`} passHref legacyBehavior>
+                <a className="block flex-grow">
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Pending Balance:</span>
+                      <span className="font-semibold">{formatCurrency(loanSummary.currentPrincipal)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Monthly EMI:</span>
+                      <span className="font-semibold">{formatCurrency(loanSummary.monthlyEMI)}</span>
+                    </div>
+                    <div>
+                      <Progress value={loanSummary.completedPercentage} className="h-3 mt-1" />
+                      <p className="text-xs text-muted-foreground mt-1 text-right">
+                        {loanSummary.completedPercentage}% paid
+                      </p>
+                    </div>
+                  </CardContent>
+                </a>
+              </Link>
             </Card>
           ))}
         </div>
@@ -211,3 +257,4 @@ export default function LoansPage() {
     </div>
   );
 }
+
