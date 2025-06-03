@@ -80,7 +80,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { parseISO, format, formatISO } from 'date-fns';
+import { parseISO, format, formatISO, isBefore } from 'date-fns';
 
 
 interface SimulationResults {
