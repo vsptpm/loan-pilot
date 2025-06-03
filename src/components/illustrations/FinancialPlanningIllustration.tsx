@@ -8,31 +8,31 @@ export function FinancialPlanningIllustration(props: SVGProps<SVGSVGElement>) {
       viewBox="0 0 300 200"
       width={props.width || 300}
       height={props.height || 200}
-      aria-labelledby="minimalFinancialPlanningTitleV2"
+      aria-labelledby="getStartedLoanPilotTitle"
       role="img"
       {...props}
     >
-      <title id="minimalFinancialPlanningTitleV2">Minimal illustration representing financial planning with abstract chart bars, a sprout, and a coin</title>
+      <title id="getStartedLoanPilotTitle">Minimal illustration for getting started with LoanPilot, showing abstract steps and a target.</title>
       
-      {/* Element 1: Abstract Chart Bars */}
-      <rect x="70" y="100" width="20" height="60" rx="3" fill="hsl(var(--primary) / 0.6)" />
-      <rect x="100" y="80" width="20" height="80" rx="3" fill="hsl(var(--primary) / 0.8)" />
-      <rect x="130" y="110" width="20" height="50" rx="3" fill="hsl(var(--primary) / 0.4)" />
+      {/* Background shapes for subtle texture - optional */}
+      {/* <rect width="300" height="200" fill="hsl(var(--background))" /> */}
 
-      {/* Element 2: Minimal Sprout */}
-      {/* Stem */}
-      <path d="M190 150 Q190 120 200 110" stroke="hsl(var(--accent))" strokeWidth="4" fill="none" strokeLinecap="round"/>
-      {/* Leaves */}
-      <ellipse cx="190" cy="105" rx="12" ry="7" fill="hsl(var(--accent) / 0.7)" transform="rotate(-30 190 105)" />
-      <ellipse cx="210" cy="100" rx="12" ry="7" fill="hsl(var(--accent) / 0.7)" transform="rotate(20 210 100)" />
+      {/* Element 1: Abstract Steps / Blocks */}
+      <rect x="70" y="120" width="40" height="40" rx="5" fill="hsl(var(--primary) / 0.3)" />
+      <rect x="120" y="100" width="40" height="60" rx="5" fill="hsl(var(--primary) / 0.5)" />
+      <rect x="170" y="80" width="40" height="80" rx="5" fill="hsl(var(--primary) / 0.7)" />
 
-      {/* Element 3: Single Coin */}
-      <circle cx="230" cy="140" r="15" fill="hsl(var(--secondary))" stroke="hsl(var(--secondary-foreground) / 0.3)" strokeWidth="1.5" />
-      {/* Simple detail on coin */}
-      <path d="M226 140 A 6 6 0 0 0 234 140" fill="none" stroke="hsl(var(--secondary-foreground) / 0.5)" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M226 135 A 6 6 0 0 1 234 135" fill="none" stroke="hsl(var(--secondary-foreground) / 0.5)" strokeWidth="1.5" strokeLinecap="round" />
-       <path d="M226 145 A 6 6 0 0 1 234 145" fill="none" stroke="hsl(var(--secondary-foreground) / 0.5)" strokeWidth="1.5" strokeLinecap="round" />
-
+      {/* Element 2: Target/Goal Icon (simple) */}
+      <circle cx="230" cy="70" r="18" fill="none" stroke="hsl(var(--accent))" strokeWidth="3" />
+      <circle cx="230" cy="70" r="8" fill="hsl(var(--accent))" />
+      
+      {/* Element 3: Small stylized arrow pointing towards target/steps */}
+      <path d="M60 70 L80 70 M70 60 L80 70 L70 80" 
+            stroke="hsl(var(--muted-foreground) / 0.6)" 
+            strokeWidth="3" 
+            fill="none" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" />
 
     </svg>
   );
