@@ -91,9 +91,9 @@ export function LoanForm({ onSubmit, initialData, isLoading = false, submitButto
             name="principalAmount"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Principal Amount ($)</FormLabel>
+                <FormLabel>Principal Amount (₹)</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" placeholder="e.g., 10000" {...field} />
+                  <Input type="number" step="0.01" placeholder="e.g., 100000" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -192,9 +192,9 @@ export function LoanForm({ onSubmit, initialData, isLoading = false, submitButto
             name="amountAlreadyPaid"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Amount Already Paid ($) (Optional)</FormLabel>
+                <FormLabel>Amount Already Paid (₹) (Optional)</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" placeholder="e.g., 1000" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ""} />
+                  <Input type="number" step="0.01" placeholder="e.g., 10000" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ""} />
                 </FormControl>
                 <FormDescription>If you&apos;ve already made some payments.</FormDescription>
                 <FormMessage />
@@ -211,5 +211,3 @@ export function LoanForm({ onSubmit, initialData, isLoading = false, submitButto
     </Form>
   );
 }
-
-    

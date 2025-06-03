@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { formatCurrency, formatDate } from '@/lib/utils';
 
 export default function LoansPage() {
   const { user } = useAuth();
@@ -155,7 +156,7 @@ export default function LoansPage() {
               <CardContent className="space-y-2 flex-grow">
                 <div className="flex items-center text-sm text-muted-foreground">
                   <CircleDollarSign className="mr-2 h-4 w-4 text-primary" />
-                  Principal: <span className="ml-1 font-medium text-foreground">${loan.principalAmount.toLocaleString()}</span>
+                  Principal: <span className="ml-1 font-medium text-foreground">{formatCurrency(loan.principalAmount)}</span>
                 </div>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Percent className="mr-2 h-4 w-4 text-primary" />
@@ -167,7 +168,7 @@ export default function LoansPage() {
                 </div>
                  <div className="flex items-center text-sm text-muted-foreground">
                   <Landmark className="mr-2 h-4 w-4 text-primary" />
-                  Start Date: <span className="ml-1 font-medium text-foreground">{new Date(loan.startDate).toLocaleDateString()}</span>
+                  Start Date: <span className="ml-1 font-medium text-foreground">{formatDate(loan.startDate)}</span>
                 </div>
               </CardContent>
               <CardFooter>

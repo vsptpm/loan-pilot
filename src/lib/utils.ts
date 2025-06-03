@@ -14,11 +14,11 @@ export function cn(...inputs: ClassValue[]) {
 export function formatCurrency(amount: number | null | undefined): string {
   if (amount == null) {
     // Handle null or undefined, return an empty string
-    return ''; 
+    return '';
   }
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'INR',
   }).format(amount);
 }
 
@@ -37,6 +37,6 @@ export function formatDate(dateString: string | Date | null | undefined): string
   } catch (error) {
     // console.error("Error formatting date:", dateString, error);
     // Fallback if date parsing fails, though parseISO is robust
-    return 'Invalid Date'; 
+    return 'Invalid Date';
   }
 }
