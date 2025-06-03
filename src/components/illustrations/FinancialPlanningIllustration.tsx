@@ -8,60 +8,46 @@ export function FinancialPlanningIllustration(props: SVGProps<SVGSVGElement>) {
       viewBox="0 0 300 200"
       width={props.width || 300}
       height={props.height || 200}
-      aria-labelledby="financialPlanningTitleAlt"
+      aria-labelledby="financialPlanningTitleAltV3"
       role="img"
       {...props}
     >
-      <title id="financialPlanningTitleAlt">Illustration representing financial growth with a piggy bank, coins, and an upward arrow</title>
-      {/* Background elements removed for transparency */}
+      <title id="financialPlanningTitleAltV3">Illustration representing financial planning with a growing plant, coins, and a document</title>
+      
+      {/* Document Icon */}
+      <rect x="50" y="70" width="80" height="100" rx="5" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.7)" strokeWidth="2"/>
+      <line x1="60" y1="90" x2="120" y2="90" stroke="hsl(var(--muted-foreground) / 0.5)" strokeWidth="2"/>
+      <line x1="60" y1="105" x2="120" y2="105" stroke="hsl(var(--muted-foreground) / 0.5)" strokeWidth="2"/>
+      <line x1="60" y1="120" x2="100" y2="120" stroke="hsl(var(--muted-foreground) / 0.5)" strokeWidth="2"/>
+      <line x1="60" y1="135" x2="120" y2="135" stroke="hsl(var(--muted-foreground) / 0.5)" strokeWidth="2"/>
+      <line x1="60" y1="150" x2="90" y2="150" stroke="hsl(var(--muted-foreground) / 0.5)" strokeWidth="2"/>
+      <circle cx="75" cy="80" r="3" fill="hsl(var(--primary) / 0.5)" />
+      <circle cx="95" cy="80" r="3" fill="hsl(var(--primary) / 0.5)" />
 
-      {/* Piggy Bank */}
-      <path 
-        d="M100,150 
-           C80,150 70,140 70,120 
-           C70,100 80,90 100,90 
-           C120,90 130,80 150,80 
-           C170,80 180,90 200,90 
-           C220,90 230,100 230,120 
-           C230,140 220,150 200,150 
-           Z" 
-        fill="hsl(var(--primary) / 0.2)" 
-        stroke="hsl(var(--primary))" 
-        strokeWidth="2"
-      />
-      {/* Snout */}
-      <ellipse cx="65" cy="118" rx="10" ry="15" fill="hsl(var(--primary) / 0.3)" stroke="hsl(var(--primary))" strokeWidth="1.5" transform="rotate(-10 65 118)" />
-      <ellipse cx="63" cy="115" rx="3" ry="2" fill="hsl(var(--primary))" transform="rotate(-10 63 115)" />
-      <ellipse cx="68" cy="120" rx="3" ry="2" fill="hsl(var(--primary))" transform="rotate(-10 68 120)" />
-      {/* Ear */}
-      <path d="M95,85 Q100,70 115,80 L105,95 Z" fill="hsl(var(--primary) / 0.3)" stroke="hsl(var(--primary))" strokeWidth="1.5"/>
-      {/* Tail */}
-      <path d="M230,115 Q240,100 235,90 C 245,95 240,110 230,115" fill="hsl(var(--primary) / 0.3)" stroke="hsl(var(--primary))" strokeWidth="1.5"/>
-      {/* Slot */}
-      <rect x="140" y="70" width="20" height="5" rx="2" fill="hsl(var(--primary) / 0.7)" />
-      {/* Feet */}
-      <rect x="95" y="148" width="15" height="10" rx="3" fill="hsl(var(--primary) / 0.5)" />
-      <rect x="185" y="148" width="15" height="10" rx="3" fill="hsl(var(--primary) / 0.5)" />
+      {/* Growing Plant */}
+      {/* Pot */}
+      <path d="M170 160 Q170 170 180 170 L220 170 Q230 170 230 160 L225 140 L175 140 Z" fill="hsl(var(--secondary) / 0.3)" stroke="hsl(var(--secondary))" strokeWidth="2" />
+      {/* Stem */}
+      <line x1="200" y1="140" x2="200" y2="90" stroke="hsl(var(--primary))" strokeWidth="3" />
+      {/* Leaves */}
+      <ellipse cx="185" cy="100" rx="15" ry="8" fill="hsl(var(--primary) / 0.8)" transform="rotate(-30 185 100)" />
+      <ellipse cx="215" cy="100" rx="15" ry="8" fill="hsl(var(--primary) / 0.8)" transform="rotate(30 215 100)" />
+      <ellipse cx="195" cy="80" rx="12" ry="7" fill="hsl(var(--primary) / 0.9)" transform="rotate(-15 195 80)" />
+      <ellipse cx="205" cy="80" rx="12" ry="7" fill="hsl(var(--primary) / 0.9)" transform="rotate(15 205 80)" />
+      <circle cx="200" cy="65" r="10" fill="hsl(var(--primary))" />
 
       {/* Coins */}
-      <circle cx="150" cy="60" r="12" fill="hsl(var(--accent))" stroke="hsl(var(--accent-foreground) / 0.7)" strokeWidth="1.5" />
-      <text x="150" y="65" textAnchor="middle" fill="hsl(var(--accent-foreground))" fontSize="10" fontWeight="bold">₹</text>
+      <circle cx="230" y="120" r="12" fill="hsl(var(--accent))" stroke="hsl(var(--accent-foreground) / 0.7)" strokeWidth="1.5" />
+      <text x="230" y="124" textAnchor="middle" fill="hsl(var(--accent-foreground))" fontSize="10" fontWeight="bold">₹</text>
       
-      <circle cx="175" cy="50" r="10" fill="hsl(var(--accent) / 0.8)" stroke="hsl(var(--accent-foreground) / 0.6)" strokeWidth="1.5" />
-      <text x="175" y="54" textAnchor="middle" fill="hsl(var(--accent-foreground))" fontSize="8" fontWeight="bold">₹</text>
+      <circle cx="245" y="105" r="10" fill="hsl(var(--accent) / 0.8)" stroke="hsl(var(--accent-foreground) / 0.6)" strokeWidth="1.5" />
+      <text x="245" y="109" textAnchor="middle" fill="hsl(var(--accent-foreground))" fontSize="8" fontWeight="bold">₹</text>
 
-      <circle cx="130" cy="45" r="8" fill="hsl(var(--accent) / 0.6)" stroke="hsl(var(--accent-foreground) / 0.5)" strokeWidth="1.5" />
-      <text x="130" y="48" textAnchor="middle" fill="hsl(var(--accent-foreground))" fontSize="7" fontWeight="bold">₹</text>
-
-      {/* Upward Arrow / Growth */}
-      <path d="M220,70 L220,40 L210,50 M220,40 L230,50" stroke="hsl(var(--destructive))" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <line x1="220" y1="70" x2="220" y2="85" stroke="hsl(var(--destructive))" strokeWidth="3" />
-
-      {/* Small decorative bar chart elements */}
-      <rect x="40" y="160" width="10" height="20" fill="hsl(var(--secondary) / 0.7)" rx="2"/>
-      <rect x="55" y="145" width="10" height="35" fill="hsl(var(--secondary) / 0.7)" rx="2"/>
-      <rect x="245" y="155" width="10" height="25" fill="hsl(var(--secondary) / 0.7)" rx="2"/>
-      <rect x="260" y="135" width="10" height="45" fill="hsl(var(--secondary) / 0.7)" rx="2"/>
+      <circle cx="220" y="95" r="8" fill="hsl(var(--accent) / 0.6)" stroke="hsl(var(--accent-foreground) / 0.5)" strokeWidth="1.5" />
+      <text x="220" y="98" textAnchor="middle" fill="hsl(var(--accent-foreground))" fontSize="7" fontWeight="bold">₹</text>
+      
+      {/* Decorative ground lines - subtle */}
+      <line x1="30" y1="180" x2="270" y2="180" stroke="hsl(var(--border) / 0.5)" strokeWidth="1.5" strokeDasharray="5,5" />
 
     </svg>
   );
