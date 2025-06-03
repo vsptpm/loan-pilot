@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 const formSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }).max(50, { message: 'Full name must be 50 characters or less.' }),
@@ -33,6 +33,9 @@ const formSchema = z.object({
 export function SignupForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -48,7 +51,7 @@ export function SignupForm() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       await updateProfile(userCredential.user, {
-        displayName: values.fullName, // Store fullName in Firebase's displayName
+        displayName: values.fullName,
       });
       toast({ title: 'Signup Successful', description: 'Welcome to LoanPilot! You are now logged in.' });
       // useRouter redirect is handled by AuthProvider
@@ -98,9 +101,21 @@ export function SignupForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Password</FormLabel>
-              <FormControl>
-                <Input placeholder="••••••••" {...field} type="password" />
-              </FormControl>
+              <div className="relative">
+                <FormControl>
+                  <Input placeholder="••••••••" {...field} type={showPassword ? 'text' : 'password'} className="pr-10" />
+                </FormControl>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
               <FormMessage />
             </FormItem>
           )}
@@ -111,9 +126,21 @@ export function SignupForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Confirm Password</FormLabel>
-              <FormControl>
-                <Input placeholder="••••••••" {...field} type="password" />
-              </FormControl>
+              <div className="relative">
+                <FormControl>
+                  <Input placeholder="••••••••" {...field} type={showConfirmPassword ? 'text' : 'password'} className="pr-10" />
+                </FormControl>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
               <FormMessage />
             </FormItem>
           )}
