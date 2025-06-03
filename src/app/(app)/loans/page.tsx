@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import type { Loan, AmortizationEntry } from '@/types'; // Added AmortizationEntry
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import { PlusCircle, Edit3, Trash2, Eye, MoreVertical, Loader2, SearchX } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, MoreVertical, Loader2, SearchX } from 'lucide-react'; // Removed Eye
 import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -31,14 +31,14 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { NoLoansFoundIllustration } from '@/components/illustrations/NoLoansFoundIllustration';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Progress } from '@/components/ui/progress'; // Added Progress
+import { Progress } from '@/components/ui/progress';
 import {
   calculateEMI,
   generateAmortizationSchedule,
   getLoanStatus,
   getInitialPaidEMIsCount,
   type LoanStatus,
-} from '@/lib/loanUtils'; // Added loan utils
+} from '@/lib/loanUtils';
 
 interface LoanDisplaySummary {
   id: string;
@@ -180,7 +180,9 @@ export default function LoansPage() {
               <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer h-full flex flex-col">
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <CardTitle className="font-headline text-xl hover:underline flex-grow mr-2">{loanSummary.name}</CardTitle>
+                    <CardTitle className="font-headline text-xl hover:underline mr-2"> {/* Removed flex-grow */}
+                      {loanSummary.name}
+                    </CardTitle>
                     <div className="flex items-center flex-shrink-0">
                       <span className="text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary mr-2 whitespace-nowrap">
                         {loanSummary.interestRate}% APR
@@ -188,23 +190,38 @@ export default function LoansPage() {
                       <AlertDialog>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8" 
+                              onClick={(e) => { 
+                                e.preventDefault(); 
+                                e.stopPropagation(); 
+                              }}
+                            >
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link href={`/loans/${loanSummary.id}`} legacyBehavior passHref>
-                                <a><Eye className="mr-2 h-4 w-4" />View Details</a>
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
+                            <DropdownMenuItem 
+                              asChild 
+                              onClick={(e) => { 
+                                e.preventDefault(); 
+                                e.stopPropagation(); 
+                              }}
+                            >
                               <Link href={`/loans/edit/${loanSummary.id}`} legacyBehavior passHref>
                                 <a><Edit3 className="mr-2 h-4 w-4" />Edit</a>
                               </Link>
                             </DropdownMenuItem>
                             <AlertDialogTrigger asChild>
-                              <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                              <DropdownMenuItem 
+                                className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                onClick={(e) => { 
+                                  e.preventDefault(); 
+                                  e.stopPropagation(); 
+                                }}
+                              >
                                 <Trash2 className="mr-2 h-4 w-4" />Delete
                               </DropdownMenuItem>
                             </AlertDialogTrigger>
