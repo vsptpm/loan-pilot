@@ -155,41 +155,10 @@ export default function LoanDetailPage() {
   }, [loan, initialPaidEMIsCount]);
   
   const loanStatus: LoanStatus | null = useMemo(() => {
-    if (!loan || !originalSchedule || originalSchedule.length === 0) {
-        if(loan) { // Fallback for loans with no schedule (e.g. 0 duration, or just amountAlreadyPaid)
-            return getLoanStatus(loan, []); // getLoanStatus handles empty schedule
-        }
-        return null;
-    }
+    if (!loan) return null; // Return null if loan is not loaded yet
+    // getLoanStatus can now handle an empty schedule internally
     return getLoanStatus(loan, originalSchedule);
   }, [loan, originalSchedule]);
-
-  const { principalPortionPaidToDate, interestPortionPaidToDate } = useMemo(() => {
-    let PTDPrincipal = 0;
-    let PTDInterest = 0;
-    const today = new Date();
-  
-    if (originalSchedule && originalSchedule.length > 0) {
-      for (const entry of originalSchedule) {
-        if (parseISO(entry.paymentDate) <= today) {
-          PTDPrincipal += entry.principalPaid;
-          PTDInterest += entry.interestPaid;
-        } else {
-          // Assuming schedule is sorted by date
-          break; 
-        }
-      }
-    } else if (loan && loan.amountAlreadyPaid > 0) {
-      // If no schedule (e.g. loan paid off by amountAlreadyPaid or zero duration),
-      // attribute amountAlreadyPaid to principal if loan start date is in the past.
-      if (parseISO(loan.startDate) <= today) {
-          PTDPrincipal = loan.amountAlreadyPaid;
-          // Interest portion cannot be determined without a schedule, so assumed to be 0
-          PTDInterest = 0; 
-      }
-    }
-    return { principalPortionPaidToDate: PTDPrincipal, interestPortionPaidToDate: PTDInterest };
-  }, [originalSchedule, loan]);
 
 
   const prepaymentMonthOptions = useMemo(() => {
@@ -349,7 +318,7 @@ export default function LoanDetailPage() {
     );
   }
 
-  if (!loan) {
+  if (!loan || !loanStatus) { // Ensure loanStatus is also available
     return (
        <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
         <p className="text-lg text-muted-foreground">Loan data not available.</p>
@@ -396,7 +365,7 @@ export default function LoanDetailPage() {
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Principal Amount:</span>
+                  <span className="text-muted-foreground">Original Principal Amount:</span>
                   <span className="font-medium">{formatCurrency(loan.principalAmount)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -407,26 +376,22 @@ export default function LoanDetailPage() {
                   <span className="text-muted-foreground">Loan Term:</span>
                   <span className="font-medium">{loan.durationMonths} months</span>
                 </div>
-                <div className="flex justify-between">
+                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount Initially Paid:</span>
                   <span className="font-medium">{formatCurrency(loan.amountAlreadyPaid)}</span>
                 </div>
-                 {loanStatus && (
-                   <>
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Current Outstanding Balance:</span>
-                        <span className="font-medium">{formatCurrency(loanStatus.currentBalance)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Next Payment Due:</span>
-                        <span className="font-medium">{loanStatus.nextDueDate ? formatDate(loanStatus.nextDueDate) : 'N/A'}</span>
-                    </div>
-                   </>
-                 )}
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Outstanding Balance (as of today):</span>
+                    <span className="font-medium">{formatCurrency(loanStatus.currentBalance)}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Next Scheduled Payment:</span>
+                    <span className="font-medium">{loanStatus.nextDueDate ? formatDate(loanStatus.nextDueDate) : 'N/A'}</span>
+                </div>
             </div>
             <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Start Date:</span>
+                  <span className="text-muted-foreground">Loan Start Date:</span>
                   <span className="font-medium">{formatDate(loan.startDate)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -434,25 +399,21 @@ export default function LoanDetailPage() {
                   <span className="font-medium">{formatCurrency(monthlyEMI)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Principal Repaid (by current date):</span>
-                  <span className="font-medium">{formatCurrency(principalPortionPaidToDate)}</span>
+                  <span className="text-muted-foreground">Total Principal Paid (as of today):</span>
+                  <span className="font-medium">{formatCurrency(loanStatus.totalPrincipalPaid)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Interest Paid (by current date):</span>
-                  <span className="font-medium">{formatCurrency(interestPortionPaidToDate)}</span>
+                  <span className="text-muted-foreground">Total Interest Paid (as of today):</span>
+                  <span className="font-medium">{formatCurrency(loanStatus.totalInterestPaid)}</span>
                 </div>
-                {loanStatus && (
-                  <>
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">EMIs Paid (Recorded):</span>
-                        <span className="font-medium">{loanStatus.paidEMIsCount} / {originalSchedule.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Progress (Recorded):</span>
-                        <span className="font-medium">{loanStatus.completedPercentage}%</span>
-                    </div>
-                  </>
-                )}
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">EMIs Due (as of today):</span>
+                    <span className="font-medium">{loanStatus.paidEMIsCount} / {originalSchedule.length}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Progress (as of today):</span>
+                    <span className="font-medium">{loanStatus.completedPercentage}%</span>
+                </div>
             </div>
         </CardContent>
       </Card>
