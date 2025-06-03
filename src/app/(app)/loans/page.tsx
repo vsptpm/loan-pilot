@@ -99,6 +99,7 @@ export default function LoansPage() {
         loan.startDate,
         initialPaidEMIs
       );
+      // For summary on this page, pass forSummaryView: true
       const status = getLoanStatus(loan, basicSchedule, true);
 
       return {
