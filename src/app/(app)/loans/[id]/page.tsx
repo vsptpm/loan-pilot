@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Card,
@@ -96,8 +96,9 @@ export default function LoanDetailPage() {
   const [openMonthSelector, setOpenMonthSelector] = useState(false);
 
 
-  const fetchLoan = async (loanId: string) => {
+  const fetchLoan = useCallback(async (loanId: string) => {
     if (!user) return;
+    // setLoading(true); // Not needed here as it's set true initially and false in finally
     try {
       const loanDocRef = doc(db, `users/${user.uid}/loans`, loanId);
       const loanDocSnap = await getDoc(loanDocRef);
@@ -122,14 +123,20 @@ export default function LoanDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, toast, router, setLoan, setLoading]); // Added setLoan, setLoading to dependencies
 
   useEffect(() => {
     if (id && user) {
       const loanId = Array.isArray(id) ? id[0] : id;
       fetchLoan(loanId);
+    } else if (!user && id) {
+      // If user is not yet available but id is, we might be waiting for auth.
+      // setLoading(true) might be appropriate here if not handled by a global loader.
+      // However, the main AuthProvider handles global loading states.
+    } else {
+      setLoading(false); // If no ID, or no user and no ID, stop loading.
     }
-  }, [id, user]);
+  }, [id, user, fetchLoan]); // Added fetchLoan to dependencies
 
   const originalSchedule: AmortizationEntry[] = useMemo(() => {
     if (!loan) return [];
@@ -215,7 +222,6 @@ export default function LoanDetailPage() {
     }
 
     if (isNaN(afterMonth) || afterMonth < 0 || afterMonth > originalSchedule.length) {
-      // This validation might be redundant if dropdown forces valid selection, but good for safety.
       toast({ title: "Invalid Input", description: `Selected prepayment timing is invalid.`, variant: "destructive" });
       return;
     }
@@ -302,7 +308,11 @@ export default function LoanDetailPage() {
   }
 
   if (!loan) {
-    return null;
+    return (
+       <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
+        <p className="text-lg text-muted-foreground">Loan data not available or still loading.</p>
+      </div>
+    );
   }
   
   const chartConfigBalance = {
@@ -596,5 +606,3 @@ export default function LoanDetailPage() {
     </div>
   );
 }
-
-    
