@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useEffect, useState, useMemo } from 'react';
-import Image from 'next/image';
+// import Image from 'next/image'; // No longer using next/image for this specific part
 import type { Loan, AmortizationEntry } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
@@ -47,10 +47,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
-  ResponsiveContainer,
   Legend as RechartsLegend,
   LabelList
 } from 'recharts';
+import { FinancialPlanningIllustration } from '@/components/illustrations/FinancialPlanningIllustration';
 
 
 interface DashboardLoanSummary {
@@ -283,14 +283,7 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center text-center">
-            <Image
-              src="https://placehold.co/300x200.png"
-              alt="Empty state illustration"
-              width={300}
-              height={200}
-              className="mb-6 rounded-md"
-              data-ai-hint="financial planning illustration"
-            />
+            <FinancialPlanningIllustration className="mb-6 rounded-md" width={300} height={200} />
             <p className="mb-4 text-muted-foreground">
               It looks like you haven&apos;t added any loans yet. Click the button below to add your first loan and take control of your finances.
             </p>
@@ -334,7 +327,6 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </CardContent>
-              {/* CardFooter removed */}
             </Card>
           </Link>
         ))}
