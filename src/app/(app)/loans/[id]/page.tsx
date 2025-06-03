@@ -242,7 +242,7 @@ export default function LoanDetailPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex justify-between items-start gap-2">
-            <CardTitle className="text-3xl font-headline flex-grow">{loan.name}</CardTitle>
+            <CardTitle className="text-2xl sm:text-3xl font-headline flex-grow">{loan.name}</CardTitle>
             <div className="flex items-center gap-2 flex-shrink-0">
               {loanIdString && (
                 <Link href={`/loans/edit/${loanIdString}`} legacyBehavior passHref>
@@ -277,7 +277,7 @@ export default function LoanDetailPage() {
           <CardDescription>Detailed overview of your loan, reflecting all recorded prepayments. Assumes on-time EMI payments up to today.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card className="shadow-md rounded-xl">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Original Principal</CardTitle>
