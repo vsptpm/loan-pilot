@@ -50,7 +50,7 @@ import {
   calculateEMI,
   getLoanStatus
 } from '@/lib/loanUtils';
-import { LineChart as LineChartIcon, BarChart3 as BarChartIcon, Loader2, TrendingUp, Calculator, ChevronsUpDown, Check, Edit3, Landmark as RecordIcon, ListChecks, Trash2, CircleDollarSign, Repeat, Wallet } from 'lucide-react';
+import { Loader2, TrendingUp, Calculator, ChevronsUpDown, Check, Edit3, Landmark as RecordIcon, ListChecks, Trash2, CircleDollarSign, Repeat, Wallet } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,20 +62,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart"
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from 'recharts';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Dialog,
@@ -295,24 +281,6 @@ export default function LoanDetailPage() {
     }
   };
 
-
-  const remainingBalanceChartData = useMemo(() => {
-    if (!currentAmortizationSchedule || currentAmortizationSchedule.length === 0) return [];
-    return currentAmortizationSchedule.map(entry => ({
-      month: `Month ${entry.month}`,
-      balance: entry.remainingBalance,
-    }));
-  }, [currentAmortizationSchedule]);
-
-  const principalInterestChartData = useMemo(() => {
-    if (!currentAmortizationSchedule || currentAmortizationSchedule.length === 0) return [];
-    return currentAmortizationSchedule.map(entry => ({
-      month: `Month ${entry.month}`,
-      principal: entry.principalPaid,
-      interest: entry.interestPaid,
-    }));
-  }, [currentAmortizationSchedule]);
-
   const handleSimulatePrepayment = () => {
     if (!loan || currentAmortizationSchedule.length === 0) {
       toast({ title: "Error", description: "Loan data not available for simulation.", variant: "destructive" });
@@ -443,25 +411,6 @@ export default function LoanDetailPage() {
     );
   }
   
-  const chartConfigBalance = {
-    balance: {
-      label: "Balance",
-      color: "hsl(var(--chart-1))",
-    },
-  };
-
-  const chartConfigPrincipalInterest = {
-    principal: {
-      label: "Principal",
-      color: "hsl(var(--chart-1))",
-    },
-    interest: {
-      label: "Interest",
-      color: "hsl(var(--chart-2))",
-    },
-  };
-
-
   return (
     <div className="container mx-auto py-8 space-y-8">
       <Card className="shadow-lg">
@@ -851,54 +800,7 @@ export default function LoanDetailPage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-primary">Loan Visualizations</CardTitle>
-          <CardDescription>Visual breakdown of your loan repayment, reflecting all recorded prepayments and assumed on-time payments.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-3 sm:pt-4 md:pt-6">
-          <div className="space-y-2">
-            <h3 className="text-lg font-headline flex items-center justify-center">
-              <LineChartIcon className="mr-2 h-5 w-5 text-accent" />
-              Remaining Balance Over Time
-            </h3>
-            {remainingBalanceChartData.length > 0 ? (
-              <ChartContainer config={chartConfigBalance} className="h-[250px] sm:h-[300px] w-full">
-                <LineChart data={remainingBalanceChartData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tickFormatter={(value) => `₹${value/1000}k`} tick={{ fontSize: 12 }} />
-                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
-                  <Line type="monotone" dataKey="balance" stroke="var(--color-balance)" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ChartContainer>
-            ) : (
-              <p className="text-muted-foreground text-center py-10">Not enough data for balance chart.</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-lg font-headline flex items-center justify-center">
-              <BarChartIcon className="mr-2 h-5 w-5 text-accent" />
-              Principal vs. Interest per EMI
-            </h3>
-            {principalInterestChartData.length > 0 ? (
-              <ChartContainer config={chartConfigPrincipalInterest} className="h-[250px] sm:h-[300px] w-full">
-                <BarChart data={principalInterestChartData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tickFormatter={(value) => `₹${value/1000}k`} tick={{ fontSize: 12 }} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="principal" stackId="a" fill="var(--color-principal)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="interest" stackId="a" fill="var(--color-interest)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ChartContainer>
-            ) : (
-              <p className="text-muted-foreground text-center py-10">Not enough data for principal/interest chart.</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
+
