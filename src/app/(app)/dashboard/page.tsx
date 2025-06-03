@@ -4,7 +4,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { PlusCircle, Info, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, ShieldCheck, Percent, CheckCircle2, AlertCircle, HelpCircle as InfoIconLucide } from 'lucide-react';
+import { PlusCircle, Info, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, ShieldCheck, Percent, CheckCircle2, AlertCircle, HelpCircle as InfoIconLucide, Loader2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -208,7 +208,7 @@ export default function DashboardPage() {
           <Card className="shadow-md rounded-xl">
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-                <TrendingDownIcon className="mr-2 h-4 w-4 text-destructive" /> Borrowed
+                <TrendingDown className="mr-2 h-4 w-4 text-destructive" /> Borrowed
               </CardTitle>
             </CardHeader>
             <CardContent>
