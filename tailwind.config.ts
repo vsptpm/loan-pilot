@@ -1,4 +1,5 @@
 import type {Config} from 'tailwindcss';
+const defaultTheme = require('tailwindcss/defaultTheme'); // Import defaultTheme
 
 export default {
   darkMode: ['class'],
@@ -17,9 +18,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        headline: ['Belleza', 'sans-serif'],
-        body: ['Alegreya', 'serif'],
-        code: ['monospace', 'monospace'],
+        // Set Inter as the default sans-serif font using the CSS variable
+        sans: ['var(--font-inter)', ...defaultTheme.fontFamily.sans],
+        // headline and body fonts removed, will inherit from sans (Inter)
+        code: ['monospace', 'monospace'], // Keep code font as is
       },
       colors: {
         background: 'hsl(var(--background))',

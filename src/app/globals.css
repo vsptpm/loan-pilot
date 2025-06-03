@@ -2,9 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Roboto', sans-serif;
-}
+/* Removed h1-h6 Roboto font rule */
 
 @layer base {
   :root {
@@ -110,6 +108,6 @@ h1, h2, h3, h4, h5, h6 {
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Montserrat', sans-serif;
+    /* font-family: 'Montserrat', sans-serif; removed, handled by next/font and tailwind.config */
   }
 }

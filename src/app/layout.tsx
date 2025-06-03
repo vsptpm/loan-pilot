@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { Montserrat } from 'next/font/google';
+import { Inter } from 'next/font/google'; // Import Inter
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from 'next-themes';
@@ -10,9 +10,10 @@ export const metadata: Metadata = {
   description: 'Manage your personal loans effectively with LoanPilot.',
 };
 
-const montserrat = Montserrat({
+// Configure Inter font
+const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-montserrat',
+  variable: '--font-inter', // Define a CSS variable
 });
 
 export default function RootLayout({
@@ -23,10 +24,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        {/* Removed Alegreya and Belleza preconnects as they are in tailwind.config.ts, not globals.css directly used by link tags */}
+        {/* Removed manual Google Fonts preconnect, next/font handles this */}
       </head>
-      <body className={`${montserrat.variable} font-body antialiased min-h-screen bg-background text-foreground`}>
+      {/* Apply Inter font variable and Tailwind's font-sans class */}
+      <body className={`${inter.variable} font-sans antialiased min-h-screen bg-background text-foreground`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
