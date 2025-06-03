@@ -11,7 +11,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useEffect, useState, useMemo } from 'react';
@@ -306,42 +305,38 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {loanSummaries.map((summary) => (
-          <Card key={summary.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <CardTitle className="font-headline text-xl">{summary.name}</CardTitle>
-                <span className="text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary">
-                  {summary.interestRate}% APR
-                </span>
-              </div>
-              <CardDescription>
-                Next payment due: {summary.nextDueDate ? formatDate(summary.nextDueDate) : 'N/A'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Pending Balance:</span>
-                <span className="font-semibold">{formatCurrency(summary.currentPrincipal)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Monthly EMI:</span>
-                <span className="font-semibold">{formatCurrency(summary.monthlyEMI)}</span>
-              </div>
-              <div>
-                <Progress value={summary.completedPercentage} className="h-3 mt-1" />
-                <p className="text-xs text-muted-foreground mt-1 text-right">
-                  {summary.completedPercentage}% paid
-                </p>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Link href={`/loans/${summary.id}`} legacyBehavior passHref>
-                <Button variant="outline" className="w-full">
-                  View Details
-                </Button>
-              </Link>
-            </CardFooter>
-          </Card>
+          <Link key={summary.id} href={`/loans/${summary.id}`} legacyBehavior passHref>
+            <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer h-full flex flex-col">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <CardTitle className="font-headline text-xl">{summary.name}</CardTitle>
+                  <span className="text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary">
+                    {summary.interestRate}% APR
+                  </span>
+                </div>
+                <CardDescription>
+                  Next payment due: {summary.nextDueDate ? formatDate(summary.nextDueDate) : 'N/A'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 flex-grow">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Pending Balance:</span>
+                  <span className="font-semibold">{formatCurrency(summary.currentPrincipal)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Monthly EMI:</span>
+                  <span className="font-semibold">{formatCurrency(summary.monthlyEMI)}</span>
+                </div>
+                <div>
+                  <Progress value={summary.completedPercentage} className="h-3 mt-1" />
+                  <p className="text-xs text-muted-foreground mt-1 text-right">
+                    {summary.completedPercentage}% paid
+                  </p>
+                </div>
+              </CardContent>
+              {/* CardFooter removed */}
+            </Card>
+          </Link>
         ))}
       </div>
 
@@ -487,6 +482,8 @@ export default function DashboardPage() {
     </div>
   );
 }
+    
+
     
 
     
