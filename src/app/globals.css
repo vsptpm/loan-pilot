@@ -8,95 +8,95 @@ h1, h2, h3, h4, h5, h6 {
 
 @layer base {
   :root {
-    --background: 180 17% 95%; /* Very Light Blue - #F0F4F4 */
- --foreground: 181 20% 20%; /* Dark Teal/Grey for text */
+    --background: 40 89% 91%; /* #FDF0D5 - Cream */
+    --foreground: 207 100% 14%; /* #003049 - Dark Navy Blue */
 
-    --card: 0 0% 100%; /* White cards */
- --card-foreground: 181 20% 20%;
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 207 100% 14%; /* #003049 - Dark Navy Blue */
 
-    --popover: 0 0% 100%;
- --popover-foreground: 181 20% 20%;
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 207 100% 14%; /* #003049 - Dark Navy Blue */
 
-    --primary: 181 20% 46%; /* Muted Blue - #5C8D8E */
+    --primary: 207 100% 14%; /* #003049 - Dark Navy Blue */
     --primary-foreground: 0 0% 100%; /* White */
 
-    --secondary: 180 15% 88%; /* Lighter shade of background for secondary elements */
- --secondary-foreground: 181 20% 20%;
+    --secondary: 208 38% 60%; /* #669BBC - Muted Light Blue */
+    --secondary-foreground: 0 0% 100%; /* White */
 
-    --muted: 180 15% 88%;
- --muted-foreground: 181 15% 50%; /* Softer text color */
+    --muted: 40 80% 85%; /* Darker Cream */
+    --muted-foreground: 207 80% 30%; /* Muted Dark Navy Blue */
 
- --accent: 181 25% 40%; /* Deep Teal - #3E7879 */
-    --accent-foreground: 0 0% 100%; /* White */
+    --accent: 208 38% 60%; /* #669BBC - Muted Light Blue */
+    --accent-foreground: 207 100% 14%; /* #003049 - Dark Navy Blue */
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 356 82% 41%; /* #C1121F - Bright Red */
+    --destructive-foreground: 0 0% 100%; /* White */
 
- --border: 181 15% 85%; /* Light border color */
- --input: 181 15% 90%; /* Input background */
- --ring: 181 25% 40%; /* Accent color for rings */
+    --border: 208 38% 85%; /* Light variant of #669BBC */
+    --input: 40 85% 93%; /* Very light cream, slightly off-white */
+    --ring: 208 38% 60%; /* #669BBC - Muted Light Blue for focus rings */
 
- --chart-1: 181 25% 40%; /* Deep Teal */
-    --chart-2: 181 20% 46%; /* Muted Blue */
- --chart-3: 181 20% 55%;
- --chart-4: 181 15% 65%;
- --chart-5: 181 10% 75%;
+    --chart-1: 207 100% 14%; /* #003049 */
+    --chart-2: 208 38% 60%; /* #669BBC */
+    --chart-3: 356 82% 41%; /* #C1121F */
+    --chart-4: 207 100% 28%; /* Lighter Dark Navy */
+    --chart-5: 208 38% 75%; /* Lighter Muted Light Blue */
 
     --radius: 0.5rem;
 
-    --sidebar-background: 180 10% 92%;
- --sidebar-foreground: 181 20% 20%;
- --sidebar-primary: 181 25% 40%;
+    --sidebar-background: 40 89% 91%;
+    --sidebar-foreground: 207 100% 14%;
+    --sidebar-primary: 207 100% 14%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 181 20% 46%;
-    --sidebar-accent-foreground: 0 0% 100%;
- --sidebar-border: 181 15% 85%;
- --sidebar-ring: 181 25% 40%;
+    --sidebar-accent: 208 38% 60%;
+    --sidebar-accent-foreground: 207 100% 14%;
+    --sidebar-border: 208 38% 85%;
+    --sidebar-ring: 208 38% 60%;
   }
 
   .dark {
-    --background: 181 15% 15%; /* Dark Teal/Grey */
-    --foreground: 180 10% 85%; /* Light Grey/Off-white */
+    --background: 207 100% 14%; /* #003049 - Dark Navy Blue */
+    --foreground: 40 89% 91%; /* #FDF0D5 - Cream */
 
-    --card: 181 15% 20%;
-    --card-foreground: 180 10% 85%;
+    --card: 207 90% 18%; /* Slightly lighter Dark Navy Blue for cards */
+    --card-foreground: 40 89% 91%; /* #FDF0D5 - Cream */
 
-    --popover: 181 15% 20%;
-    --popover-foreground: 180 10% 85%;
+    --popover: 207 90% 18%; /* Slightly lighter Dark Navy Blue */
+    --popover-foreground: 40 89% 91%; /* #FDF0D5 - Cream */
 
- --primary: 181 18% 55%; /* Slightly lighter Muted Blue */
- --primary-foreground: 181 20% 15%; /* Dark text on primary */
+    --primary: 208 38% 60%; /* #669BBC - Muted Light Blue */
+    --primary-foreground: 207 100% 14%; /* #003049 - Dark Navy Blue for text */
 
-    --secondary: 181 15% 25%;
-    --secondary-foreground: 180 10% 85%;
+    --secondary: 207 80% 22%; /* Darker Navy shade for secondary elements */
+    --secondary-foreground: 40 89% 91%; /* #FDF0D5 - Cream */
 
-    --muted: 181 15% 25%;
- --muted-foreground: 180 10% 70%;
+    --muted: 207 100% 10%; /* Even Darker Navy for muted backgrounds */
+    --muted-foreground: 40 70% 80%; /* Dimmed Cream for muted text */
 
- --accent: 181 25% 45%; /* Slightly lighter Deep Teal */
- --accent-foreground: 181 20% 15%; /* Dark text on accent */
+    --accent: 356 82% 41%; /* #C1121F - Bright Red */
+    --accent-foreground: 0 0% 100%; /* White */
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 100% 24%; /* #780000 - Darkest Red */
+    --destructive-foreground: 40 89% 91%; /* #FDF0D5 - Cream */
 
- --border: 181 15% 35%;
- --input: 181 15% 30%;
- --ring: 181 25% 45%; /* Accent color for rings */
+    --border: 207 80% 20%; /* Dark border */
+    --input: 207 80% 22%; /* Input background */
+    --ring: 208 38% 60%; /* #669BBC - Muted Light Blue for focus rings */
 
- --chart-1: 181 25% 45%;
- --chart-2: 181 18% 55%;
- --chart-3: 181 20% 65%;
- --chart-4: 181 15% 75%;
- --chart-5: 181 10% 85%;
+    --chart-1: 208 38% 60%; /* #669BBC */
+    --chart-2: 40 89% 91%; /* #FDF0D5 */
+    --chart-3: 356 82% 41%; /* #C1121F */
+    --chart-4: 40 80% 80%; /* Dimmer Cream */
+    --chart-5: 208 38% 45%; /* Darker Muted Light Blue */
 
-    --sidebar-background: 181 15% 18%;
-    --sidebar-foreground: 180 10% 85%;
- --sidebar-primary: 181 25% 45%;
- --sidebar-primary-foreground: 181 20% 15%;
- --sidebar-accent: 181 18% 55%;
- --sidebar-accent-foreground: 181 20% 15%;
- --sidebar-border: 181 15% 35%;
- --sidebar-ring: 181 25% 45%;
+    --sidebar-background: 207 100% 14%;
+    --sidebar-foreground: 40 89% 91%;
+    --sidebar-primary: 208 38% 60%;
+    --sidebar-primary-foreground: 207 100% 14%;
+    --sidebar-accent: 356 82% 41%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 207 80% 20%;
+    --sidebar-ring: 208 38% 60%;
   }
 }
 
