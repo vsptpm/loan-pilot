@@ -40,7 +40,7 @@ import { cn } from '@/lib/utils';
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/loans', label: 'Loans', icon: Landmark },
-  { href: '/prepayment-simulator', label: 'Simulator', icon: Calculator },
+  { href: '/prepayment-simulator', label: 'Prepayment Simulator', icon: Calculator },
 ];
 
 const generalItems = [
