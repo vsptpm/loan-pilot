@@ -21,9 +21,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/hooks/useAuth';
 import type { Loan, AmortizationEntry, LoanStatus, RecordedPrepayment, RecordedPrepaymentFormData } from '@/types';
 import { db } from '@/lib/firebase';
@@ -44,13 +41,11 @@ import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
   generateAmortizationSchedule as generateRepaymentSchedule,
-  simulatePrepayment,
-  calculateTotalInterest,
-  getInitialPaidEMIsCount,
   calculateEMI,
+  getInitialPaidEMIsCount,
   getLoanStatus
 } from '@/lib/loanUtils';
-import { Loader2, TrendingUp, Calculator, ChevronsUpDown, Check, Edit3, Landmark as RecordIcon, ListChecks, Trash2, CircleDollarSign, Repeat, Wallet } from 'lucide-react';
+import { Loader2, Edit3, Landmark as RecordIcon, ListChecks, Trash2, CircleDollarSign, Repeat, Wallet } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,7 +57,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
 import {
   Dialog,
   DialogContent,
@@ -72,27 +67,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { RecordPrepaymentForm } from '@/components/loans/RecordPrepaymentForm';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import { parseISO, format, formatISO, isBefore, isEqual, isAfter } from 'date-fns';
+import { parseISO, formatISO } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
-
-
-interface SimulationResults {
-  newClosureDate: string | null;
-  interestSaved: number;
-  originalTotalInterest: number;
-  newTotalInterest: number;
-  simulatedSchedule: AmortizationEntry[];
-  oldClosureDate: string | null;
-}
 
 
 export default function LoanDetailPage() {
@@ -103,14 +80,6 @@ export default function LoanDetailPage() {
   const [loan, setLoan] = useState<Loan | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-
-  const [prepaymentInputType, setPrepaymentInputType] = useState<'percentage' | 'amount'>('percentage');
-  const [prepaymentPercentage, setPrepaymentPercentage] = useState('');
-  const [prepaymentCustomAmount, setPrepaymentCustomAmount] = useState('');
-  const [prepaymentAfterMonth, setPrepaymentAfterMonth] = useState('');
-  const [simulationResults, setSimulationResults] = useState<SimulationResults | null>(null);
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [openMonthSelector, setOpenMonthSelector] = useState(false);
 
   const [isRecordPrepaymentDialogOpen, setIsRecordPrepaymentDialogOpen] = useState(false);
   const [isRecordingPrepayment, setIsRecordingPrepayment] = useState(false);
@@ -193,39 +162,9 @@ export default function LoanDetailPage() {
   
   const loanStatus: LoanStatus | null = useMemo(() => {
     if (!loan || !currentAmortizationSchedule) return null; 
-    return getLoanStatus(loan, currentAmortizationSchedule, false); // false for detail view (accurate calculation)
+    return getLoanStatus(loan, currentAmortizationSchedule, false); 
   }, [loan, currentAmortizationSchedule]);
 
-
-  const prepaymentMonthOptions = useMemo(() => {
-    const options = [
-      { value: "0", label: "Before any scheduled EMIs (Start of Loan)" }
-    ];
-    if (currentAmortizationSchedule) { 
-      currentAmortizationSchedule.forEach(entry => {
-        try {
-          if(entry.paymentDate && typeof entry.paymentDate === 'string'){
-            options.push({
-              value: entry.month.toString(),
-              label: `After EMI ${entry.month} (${format(parseISO(entry.paymentDate), 'MMM yyyy')})`
-            });
-          } else {
-             options.push({
-              value: entry.month.toString(),
-              label: `After EMI ${entry.month} (Invalid Date)`
-            });
-          }
-        } catch (e) {
-          console.error("Error formatting date for prepayment option:", entry.paymentDate, e);
-          options.push({
-            value: entry.month.toString(),
-            label: `After EMI ${entry.month} (Error in Date)`
-          });
-        }
-      });
-    }
-    return options;
-  }, [currentAmortizationSchedule]);
 
   const handleRecordPrepaymentSubmit = async (data: RecordedPrepaymentFormData) => {
     if (!user || !loanIdString || !loan) {
@@ -280,119 +219,6 @@ export default function LoanDetailPage() {
       setDeletingPrepaymentId(null);
     }
   };
-
-  const handleSimulatePrepayment = () => {
-    if (!loan || currentAmortizationSchedule.length === 0) {
-      toast({ title: "Error", description: "Loan data not available for simulation.", variant: "destructive" });
-      return;
-    }
-
-    if (prepaymentAfterMonth === '') {
-      toast({ title: "Invalid Input", description: "Please select when the prepayment should occur.", variant: "destructive" });
-      return;
-    }
-    const afterMonth = parseInt(prepaymentAfterMonth, 10);
-
-
-    let parsedPercentage: number | undefined;
-    let parsedCustomAmount: number | undefined;
-    let prepaymentAmountValue: number;
-
-    if (prepaymentInputType === 'percentage') {
-      parsedPercentage = parseFloat(prepaymentPercentage);
-      if (isNaN(parsedPercentage) || parsedPercentage <= 0 || parsedPercentage > 100) {
-        toast({ title: "Invalid Input", description: "Please enter a valid prepayment percentage (1-100).", variant: "destructive" });
-        return;
-      }
-    } else { 
-      parsedCustomAmount = parseFloat(prepaymentCustomAmount);
-      if (isNaN(parsedCustomAmount) || parsedCustomAmount <= 0) {
-        toast({ title: "Invalid Input", description: "Please enter a valid positive prepayment amount.", variant: "destructive" });
-        return;
-      }
-    }
-    if (isNaN(afterMonth) || afterMonth < 0 || afterMonth > currentAmortizationSchedule.length) {
-      toast({ title: "Invalid Input", description: `Selected prepayment timing is invalid for the current schedule. Max month: ${currentAmortizationSchedule.length}.`, variant: "destructive" });
-      return;
-    }
-    
-    setIsSimulating(true);
-
-    let principalAtPrepaymentTime: number;
-    if (afterMonth === 0) {
-        if (currentAmortizationSchedule.length > 0) {
-            const firstEntry = currentAmortizationSchedule[0];
-            principalAtPrepaymentTime = firstEntry.remainingBalance + firstEntry.principalPaid; 
-        } else { 
-            principalAtPrepaymentTime = 0;
-        }
-    } else {
-        const entryBeforePrepayment = currentAmortizationSchedule[afterMonth -1];
-        if(!entryBeforePrepayment) {
-            toast({title: "Error", description: "Invalid month for prepayment in current schedule.", variant: "destructive"});
-            setIsSimulating(false);
-            return;
-        }
-        principalAtPrepaymentTime = entryBeforePrepayment.remainingBalance;
-    }
-
-    if (principalAtPrepaymentTime <= 0) { 
-        toast({ title: "Loan Cleared", description: "Loan balance is already zero or negative at the selected point in the current schedule.", variant: "default" });
-        const scheduleToUse = afterMonth === 0 ? [] : currentAmortizationSchedule.slice(0, afterMonth);
-        setSimulationResults({
-            newClosureDate: scheduleToUse.length > 0 && scheduleToUse[scheduleToUse.length-1]?.paymentDate ? scheduleToUse[scheduleToUse.length-1]?.paymentDate : loan.startDate,
-            interestSaved: 0,
-            originalTotalInterest: calculateTotalInterest(currentAmortizationSchedule),
-            newTotalInterest: calculateTotalInterest(scheduleToUse),
-            simulatedSchedule: scheduleToUse,
-            oldClosureDate: currentAmortizationSchedule.length > 0 && currentAmortizationSchedule[currentAmortizationSchedule.length-1]?.paymentDate ? currentAmortizationSchedule[currentAmortizationSchedule.length-1]?.paymentDate : null,
-        });
-        setIsSimulating(false);
-        return;
-    }
-
-    if (prepaymentInputType === 'percentage' && parsedPercentage !== undefined) {
-      prepaymentAmountValue = parseFloat(((parsedPercentage / 100) * principalAtPrepaymentTime).toFixed(2));
-    } else if (parsedCustomAmount !== undefined) {
-      prepaymentAmountValue = parsedCustomAmount;
-    } else {
-      toast({ title: "Error", description: "Prepayment value could not be determined.", variant: "destructive" });
-      setIsSimulating(false);
-      return;
-    }
-    
-    if (prepaymentAmountValue <=0) {
-        toast({ title: "Invalid Prepayment", description: "Calculated or entered prepayment amount is zero or less for a non-zero balance.", variant: "destructive" });
-        setIsSimulating(false);
-        return;
-    }
-
-    const simulatedSchedule = simulatePrepayment(
-      loan, 
-      currentAmortizationSchedule,
-      prepaymentAmountValue,
-      afterMonth
-    );
-
-    const originalTotalInterest = calculateTotalInterest(currentAmortizationSchedule);
-    const newTotalInterest = calculateTotalInterest(simulatedSchedule);
-    const interestSaved = parseFloat((originalTotalInterest - newTotalInterest).toFixed(2));
-    
-    const newClosureDate = simulatedSchedule.length > 0 && simulatedSchedule[simulatedSchedule.length - 1].paymentDate ? simulatedSchedule[simulatedSchedule.length - 1].paymentDate : (currentAmortizationSchedule.length > 0 && currentAmortizationSchedule[0]?.paymentDate ? currentAmortizationSchedule[0]?.paymentDate : null) ;
-    const oldClosureDate = currentAmortizationSchedule.length > 0 && currentAmortizationSchedule[currentAmortizationSchedule.length - 1].paymentDate ? currentAmortizationSchedule[currentAmortizationSchedule.length - 1].paymentDate : null;
-
-    setSimulationResults({
-      newClosureDate,
-      interestSaved,
-      originalTotalInterest,
-      newTotalInterest,
-      simulatedSchedule,
-      oldClosureDate,
-    });
-    setIsSimulating(false);
-    toast({ title: "Simulation Complete", description: "Prepayment impact calculated." });
-  };
-
 
   if (loading || loadingPrepayments) {
     return (
@@ -524,7 +350,7 @@ export default function LoanDetailPage() {
                     <span className="text-muted-foreground">Next Scheduled Payment:</span>
                     <span className="font-medium">{loanStatus.nextDueDate ? formatDate(loanStatus.nextDueDate) : (loanStatus.currentBalance <= 0.01 ? 'Paid Off' : 'N/A')}</span>
                 </div>
-                 <div className="md:col-span-2"> {/* Progress bar spans full width on medium and up */}
+                 <div className="md:col-span-2"> 
                     <div className="flex justify-between mb-1">
                         <span className="text-muted-foreground">Overall Progress (to date):</span>
                         <span className="font-medium">{loanStatus.completedPercentage.toFixed(2)}%</span>
@@ -605,153 +431,6 @@ export default function LoanDetailPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-xl font-headline flex items-center">
-             <Calculator className="mr-2 h-5 w-5 text-accent" />
-            Prepayment Simulator
-          </CardTitle>
-          <CardDescription>See how an additional hypothetical prepayment could affect your loan. This simulation is based on the current loan status including all recorded prepayments and assuming on-time EMI payments.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <Label className="mb-2 block font-medium">Prepayment Type</Label>
-            <RadioGroup
-                defaultValue="percentage"
-                value={prepaymentInputType}
-                onValueChange={(value: 'percentage' | 'amount') => {
-                    setPrepaymentInputType(value);
-                    if (value === 'percentage') setPrepaymentCustomAmount('');
-                    else setPrepaymentPercentage('');
-                }}
-                className="flex gap-x-4 gap-y-2 flex-wrap"
-            >
-                <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="percentage" id="type-percentage" />
-                    <Label htmlFor="type-percentage" className="font-normal cursor-pointer">By Percentage of Current Balance</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="amount" id="type-amount" />
-                    <Label htmlFor="type-amount" className="font-normal cursor-pointer">By Custom Amount</Label>
-                </div>
-            </RadioGroup>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {prepaymentInputType === 'percentage' ? (
-              <div className="space-y-2">
-                <Label htmlFor="prepaymentPercentage">Prepayment Percentage (%)</Label>
-                <Input
-                  id="prepaymentPercentage"
-                  type="number"
-                  placeholder="e.g., 10"
-                  value={prepaymentPercentage}
-                  onChange={(e) => setPrepaymentPercentage(e.target.value)}
-                  disabled={isSimulating}
-                />
-                <p className="text-xs text-muted-foreground">Percentage of current outstanding balance to prepay.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Label htmlFor="prepaymentCustomAmount">Custom Prepayment Amount ({formatCurrency(0).charAt(0)})</Label>
-                <Input
-                  id="prepaymentCustomAmount"
-                  type="number"
-                  step="0.01"
-                  placeholder="e.g., 5000"
-                  value={prepaymentCustomAmount}
-                  onChange={(e) => setPrepaymentCustomAmount(e.target.value)}
-                  disabled={isSimulating}
-                />
-                <p className="text-xs text-muted-foreground">Fixed amount to be prepaid.</p>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="prepaymentAfterMonth">Prepayment Timing (in current schedule)</Label>
-              <Popover open={openMonthSelector} onOpenChange={setOpenMonthSelector}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openMonthSelector}
-                    className="w-full justify-between font-normal"
-                    disabled={isSimulating}
-                  >
-                    {prepaymentAfterMonth && prepaymentMonthOptions.find(option => option.value === prepaymentAfterMonth)
-                      ? prepaymentMonthOptions.find(option => option.value === prepaymentAfterMonth)?.label
-                      : "Select EMI timing..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-60 overflow-y-auto">
-                  <Command>
-                    <CommandInput placeholder="Search EMI timing..." />
-                    <CommandList>
-                      <CommandEmpty>No timing found in current schedule.</CommandEmpty>
-                      <CommandGroup>
-                        {prepaymentMonthOptions.map((option) => (
-                          <CommandItem
-                            key={option.value}
-                            value={option.label} 
-                            onSelect={() => {
-                              setPrepaymentAfterMonth(option.value);
-                              setOpenMonthSelector(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                prepaymentAfterMonth === option.value ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {option.label}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              <p className="text-xs text-muted-foreground">Select when the prepayment should occur in the current (possibly prepayment-adjusted) schedule.</p>
-            </div>
-          </div>
-          <Button onClick={handleSimulatePrepayment} disabled={isSimulating || !loan} className="w-full sm:w-auto">
-            {isSimulating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <TrendingUp className="mr-2 h-4 w-4" />}
-            Simulate Prepayment
-          </Button>
-
-          {simulationResults && (
-            <div className="mt-6 p-4 border rounded-md bg-muted/50 space-y-3">
-              <h3 className="text-lg font-semibold font-headline">Simulation Results (on top of current state):</h3>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Current Estimated Closure Date:</span>
-                <span className="font-medium">{simulationResults.oldClosureDate ? formatDate(simulationResults.oldClosureDate) : 'N/A'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">New Estimated Closure Date (with this simulation):</span>
-                <span className="font-medium text-primary">{simulationResults.newClosureDate ? formatDate(simulationResults.newClosureDate) : 'N/A'}</span>
-              </div>
-               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Interest (current schedule):</span>
-                <span className="font-medium">{formatCurrency(simulationResults.originalTotalInterest)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Interest (with this simulation):</span>
-                <span className="font-medium">{formatCurrency(simulationResults.newTotalInterest)}</span>
-              </div>
-              <div className="flex justify-between text-lg">
-                <span className="text-muted-foreground">Further Interest Saved (by this simulation):</span>
-                <span className="font-semibold text-green-600 dark:text-green-500">{formatCurrency(simulationResults.interestSaved)}</span>
-              </div>
-              <p className="text-xs text-muted-foreground pt-2">
-                Note: This simulation assumes your monthly EMI payment remains the same, and the loan term is further reduced by this hypothetical prepayment.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-
-      <Card className="shadow-lg">
-        <CardHeader>
           <CardTitle className="text-xl font-semibold text-primary">Current Repayment Schedule</CardTitle>
           <CardDescription>
             The projected repayment plan, reflecting all recorded prepayments and assuming on-time EMI payments up to today. 
@@ -803,4 +482,3 @@ export default function LoanDetailPage() {
     </div>
   );
 }
-

@@ -24,9 +24,6 @@ export interface Loan {
   amountAlreadyPaid: number; // Amount already paid (defaults to 0 if not provided)
   totalPrepaymentAmount?: number; // Sum of all recorded prepayments for this loan
   
-  // Optional: Store calculated EMI if it's fixed.
-  // monthlyEMI?: number; 
-  
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -41,30 +38,6 @@ export interface AmortizationEntry {
   remainingBalance: number;
   isPaid: boolean; // Whether this EMI has been marked as paid by the user
   actualPaidDate?: string; // Optional: Actual date user marked/logged payment
-}
-
-// Represents a payment logged by the user (could be EMI or prepayment)
-export interface UserPaymentLog {
-  id: string; // Firestore document ID (if stored as subcollection) or unique ID within array
-  loanId: string;
-  userId: string;
-  amount: number;
-  date: string; // Date payment was made (ISO string)
-  type: 'emi' | 'prepayment'; // Type of payment
-  notes?: string; // Optional notes by user
-  createdAt: Timestamp;
-}
-
-// For the dashboard summary
-export interface LoanSummary {
-  loan: Loan;
-  monthlyEMI: number;
-  totalAmountPaid: number; // Sum of amountAlreadyPaid + logged EMIs + logged prepayments
-  totalInterestPaid: number; // Sum of interest components from paid EMIs
-  pendingBalance: number;
-  nextDueDate: string | null;
-  completedPercentage: number;
-  amortizationSchedule: AmortizationEntry[]; // Current schedule
 }
 
 // For recording a new prepayment via form
@@ -83,3 +56,12 @@ export interface RecordedPrepayment {
   createdAt: Timestamp; // Firestore server timestamp
 }
 
+// For the Prepayment Simulator results
+export interface SimulationResults {
+  newClosureDate: string | null;
+  interestSaved: number;
+  originalTotalInterest: number;
+  newTotalInterest: number;
+  simulatedSchedule: AmortizationEntry[];
+  oldClosureDate: string | null;
+}

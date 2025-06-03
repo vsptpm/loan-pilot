@@ -27,6 +27,7 @@ import {
   Search,
   Loader2,
   Landmark,
+  Calculator, // Added Calculator icon
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -39,6 +40,7 @@ import { cn } from '@/lib/utils';
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/loans', label: 'Loans', icon: Landmark },
+  { href: '/prepayment-simulator', label: 'Simulator', icon: Calculator },
 ];
 
 const generalItems = [
@@ -241,7 +243,7 @@ export default function AppLayout({
                   <Link href={item.href} legacyBehavior passHref>
                     <SidebarMenuButton
                       asChild
-                      isActive={pathname === item.href || (item.href === "/loans" && pathname.startsWith("/loans"))}
+                      isActive={pathname === item.href || (item.href === "/loans" && pathname.startsWith("/loans")) || (item.href === "/prepayment-simulator" && pathname === "/prepayment-simulator") }
                       tooltip={{ children: item.label, side: 'right', align: 'center' }}
                     >
                       <a>
