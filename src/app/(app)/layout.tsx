@@ -64,13 +64,8 @@ export default function AppLayout({
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const suggestionsContainerRef = useRef<HTMLUListElement>(null);
+  const justSearchedRef = useRef(false);
 
-
-  useEffect(() => {
-    if (pathname === '/loans') {
-      setSearchTerm(searchParams.get('search') || '');
-    }
-  }, [pathname, searchParams]);
 
   // Fetch all loans for suggestions
   useEffect(() => {
@@ -141,20 +136,28 @@ export default function AppLayout({
 
   const handleSearch = () => {
     const trimmedSearchTerm = searchTerm.trim();
-    setShowSuggestions(false);
     if (trimmedSearchTerm) {
       router.push(`/loans?search=${encodeURIComponent(trimmedSearchTerm)}`);
     } else {
       router.push('/loans');
     }
+    justSearchedRef.current = true;
+    setSearchTerm('');
+    setShowSuggestions(false);
   };
 
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-    if (value.trim() && filteredSuggestions.length > 0) { // Check filteredSuggestions based on new value
+    // Suggestion logic depends on the new value
+    // Re-evaluate filteredSuggestions based on 'value' before checking its length for setShowSuggestions
+    const currentFiltered = allLoansForSuggestions
+      .filter(loan => loan.name.toLowerCase().includes(value.toLowerCase()))
+      .slice(0, 5);
+
+    if (value.trim() && currentFiltered.length > 0) {
       setShowSuggestions(true);
-    } else if (!value.trim()){
+    } else {
       setShowSuggestions(false);
     }
     setActiveSuggestionIndex(-1);
@@ -163,16 +166,17 @@ export default function AppLayout({
   useEffect(() => {
     if (searchTerm.trim() && filteredSuggestions.length > 0 && document.activeElement === searchInputRef.current) {
       setShowSuggestions(true);
-    } else if (!searchTerm.trim()) {
+    } else if (!searchTerm.trim() && showSuggestions) { // Only hide if it was previously shown
       setShowSuggestions(false);
     }
-  }, [searchTerm, filteredSuggestions]);
+  }, [searchTerm, filteredSuggestions, showSuggestions]);
 
 
   const handleSuggestionClick = (suggestionName: string) => {
-    setSearchTerm(suggestionName);
-    setShowSuggestions(false);
     router.push(`/loans?search=${encodeURIComponent(suggestionName)}`);
+    justSearchedRef.current = true;
+    setSearchTerm('');
+    setShowSuggestions(false);
     searchInputRef.current?.focus();
   };
 
@@ -197,8 +201,8 @@ export default function AppLayout({
         } else {
           handleSearch();
         }
-        setShowSuggestions(false);
-        setActiveSuggestionIndex(-1);
+        // setShowSuggestions(false); // Already handled in handleSuggestionClick/handleSearch
+        // setActiveSuggestionIndex(-1); // Reset index
       } else if (e.key === 'Escape') {
         setShowSuggestions(false);
         setActiveSuggestionIndex(-1);
@@ -214,6 +218,21 @@ export default function AppLayout({
       selectedItem?.scrollIntoView({ block: 'nearest' });
     }
   }, [activeSuggestionIndex]);
+
+  useEffect(() => {
+    if (justSearchedRef.current) {
+      justSearchedRef.current = false; // Reset flag, searchTerm is already cleared
+      return;
+    }
+
+    if (pathname === '/loans') {
+      setSearchTerm(searchParams.get('search') || '');
+    } else {
+      // If not on /loans page and not just searched, clear search term
+      setSearchTerm('');
+    }
+  }, [pathname, searchParams]);
+
 
   return (
     <SidebarProvider defaultOpen>
@@ -314,7 +333,7 @@ export default function AppLayout({
                           "px-3 py-2 text-sm cursor-pointer hover:bg-accent focus:bg-accent outline-none",
                           index === activeSuggestionIndex && "bg-accent"
                         )}
-                        onMouseDown={() => handleSuggestionClick(suggestion.name)}
+                        onMouseDown={() => handleSuggestionClick(suggestion.name)} // Use onMouseDown to fire before blur
                         onMouseEnter={() => setActiveSuggestionIndex(index)}
                       >
                         {suggestion.name}
@@ -354,3 +373,4 @@ export default function AppLayout({
     </SidebarProvider>
   );
 }
+
