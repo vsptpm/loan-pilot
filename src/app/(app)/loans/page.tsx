@@ -26,7 +26,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle as UIDialogTitle, 
+  AlertDialogTitle as UIDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
@@ -98,6 +98,7 @@ export default function LoansPage() {
         loan.durationMonths,
         loan.startDate,
         initialPaidEMIs
+        // No recordedPrepayments for summary view
       );
       // For summary on this page, pass forSummaryView: true
       const status = getLoanStatus(loan, basicSchedule, true);
@@ -116,6 +117,7 @@ export default function LoansPage() {
 
   const handleDeleteLoan = async (loanId: string) => {
     if (!user) return;
+    // console.log('handleDeleteLoan called with id:', loanId); // For debugging
     try {
       // Delete prepayments sub-collection first
       const prepaymentsColRef = collection(db, `users/${user.uid}/loans/${loanId}/prepayments`);
@@ -246,10 +248,7 @@ export default function LoansPage() {
                             <AlertDialogTrigger asChild>
                               <DropdownMenuItem 
                                 className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                                onClick={(e) => { 
-                                  e.preventDefault(); 
-                                  e.stopPropagation(); 
-                                }}
+                                // onClick removed to allow AlertDialogTrigger to handle the click
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />Delete
                               </DropdownMenuItem>
@@ -301,4 +300,4 @@ export default function LoansPage() {
     </div>
   );
 }
-
+    
