@@ -8,49 +8,70 @@ export function FinancialPlanningIllustration(props: SVGProps<SVGSVGElement>) {
       viewBox="0 0 300 200"
       width={props.width || 300}
       height={props.height || 200}
-      aria-labelledby="financialPlanningTitle"
+      aria-labelledby="financialPlanningTitleAlt"
       role="img"
       {...props}
     >
-      <title id="financialPlanningTitle">Illustration of a person managing financial charts and graphs</title>
-      {/* Background elements */}
+      <title id="financialPlanningTitleAlt">Illustration representing financial growth with a piggy bank, coins, and an upward arrow</title>
+      {/* Background */}
       <rect width="300" height="200" fill="hsl(var(--background))" />
 
-      {/* Larger background chart (line graph) */}
-      <path d="M20 150 Q 60 100, 100 120 T 180 90" stroke="hsl(var(--muted-foreground))" strokeWidth="2" fill="none" opacity="0.7" />
-      <rect x="30" y="70" width="10" height="30" fill="hsl(var(--primary))" opacity="0.5" />
-      <rect x="45" y="55" width="10" height="45" fill="hsl(var(--primary))" opacity="0.5" />
-      <rect x="60" y="40" width="10" height="60" fill="hsl(var(--primary))" opacity="0.5" />
-      
-      {/* Circle with arrow */}
-      <circle cx="230" cy="70" r="30" fill="hsl(var(--destructive) / 0.6)" />
-      <line x1="210" y1="90" x2="250" y2="50" stroke="hsl(var(--foreground))" strokeWidth="2.5" markerEnd="url(#arrowhead)" />
+      {/* Subtle background pattern (optional, e.g., light grid) */}
       <defs>
-        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="hsl(var(--foreground))" />
-        </marker>
+        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="hsl(var(--muted) / 0.3)" strokeWidth="0.5"/>
+        </pattern>
       </defs>
+      <rect width="300" height="200" fill="url(#grid)" opacity="0.5" />
 
-      {/* Person */}
-      {/* Body */}
-      <path d="M150 100 Q 150 120 135 130 L 130 170 L 170 170 L 165 130 Q 150 120 150 100 Z" fill="hsl(var(--foreground))" /> {/* Dark pants */}
-      <path d="M140 65 L 160 65 L 165 105 L 135 105 Z" fill="hsl(var(--card))" /> {/* Light shirt */}
-      {/* Head */}
-      <circle cx="150" cy="50" r="15" fill="hsl(var(--muted))" /> {/* Skin tone */}
-      {/* Hair */}
-      <circle cx="150" cy="40" r="10" fill="hsl(var(--foreground))" /> {/* Bun */}
-      <path d="M138 45 Q 150 33 162 45" fill="hsl(var(--foreground))" /> {/* Hair top */}
-      {/* Arms */}
-      <rect x="125" y="70" width="10" height="30" rx="3" fill="hsl(var(--muted))" transform="rotate(-20 130 85)" />
-      <rect x="165" y="70" width="10" height="45" rx="3" fill="hsl(var(--muted))" transform="rotate(10 170 85)" />
+      {/* Piggy Bank */}
+      <path 
+        d="M100,150 
+           C80,150 70,140 70,120 
+           C70,100 80,90 100,90 
+           C120,90 130,80 150,80 
+           C170,80 180,90 200,90 
+           C220,90 230,100 230,120 
+           C230,140 220,150 200,150 
+           Z" 
+        fill="hsl(var(--primary) / 0.2)" 
+        stroke="hsl(var(--primary))" 
+        strokeWidth="2"
+      />
+      {/* Snout */}
+      <ellipse cx="65" cy="118" rx="10" ry="15" fill="hsl(var(--primary) / 0.3)" stroke="hsl(var(--primary))" strokeWidth="1.5" transform="rotate(-10 65 118)" />
+      <ellipse cx="63" cy="115" rx="3" ry="2" fill="hsl(var(--primary))" transform="rotate(-10 63 115)" />
+      <ellipse cx="68" cy="120" rx="3" ry="2" fill="hsl(var(--primary))" transform="rotate(-10 68 120)" />
+      {/* Ear */}
+      <path d="M95,85 Q100,70 115,80 L105,95 Z" fill="hsl(var(--primary) / 0.3)" stroke="hsl(var(--primary))" strokeWidth="1.5"/>
+      {/* Tail */}
+      <path d="M230,115 Q240,100 235,90 C 245,95 240,110 230,115" fill="hsl(var(--primary) / 0.3)" stroke="hsl(var(--primary))" strokeWidth="1.5"/>
+      {/* Slot */}
+      <rect x="140" y="70" width="20" height="5" rx="2" fill="hsl(var(--primary) / 0.7)" />
+      {/* Feet */}
+      <rect x="95" y="148" width="15" height="10" rx="3" fill="hsl(var(--primary) / 0.5)" />
+      <rect x="185" y="148" width="15" height="10" rx="3" fill="hsl(var(--primary) / 0.5)" />
 
-      {/* Small chart in hand */}
-      <rect x="170" y="100" width="50" height="35" rx="3" fill="hsl(var(--card))" stroke="hsl(var(--border))" strokeWidth="1" />
-      <rect x="178" y="118" width="7" height="10" fill="hsl(var(--primary))" />
-      <rect x="190" y="112" width="7" height="16" fill="hsl(var(--primary))" />
-      <rect x="202" y="106" width="7" height="22" fill="hsl(var(--primary))" />
-      <line x1="175" y1="130" x2="215" y2="130" stroke="hsl(var(--muted-foreground))" strokeWidth="1" />
-      <line x1="175" y1="105" x2="215" y2="105" stroke="hsl(var(--muted-foreground))" strokeWidth="1" />
+      {/* Coins */}
+      <circle cx="150" cy="60" r="12" fill="hsl(var(--accent))" stroke="hsl(var(--accent-foreground) / 0.7)" strokeWidth="1.5" />
+      <text x="150" y="65" textAnchor="middle" fill="hsl(var(--accent-foreground))" fontSize="10" fontWeight="bold">₹</text>
+      
+      <circle cx="175" cy="50" r="10" fill="hsl(var(--accent) / 0.8)" stroke="hsl(var(--accent-foreground) / 0.6)" strokeWidth="1.5" />
+      <text x="175" y="54" textAnchor="middle" fill="hsl(var(--accent-foreground))" fontSize="8" fontWeight="bold">₹</text>
+
+      <circle cx="130" cy="45" r="8" fill="hsl(var(--accent) / 0.6)" stroke="hsl(var(--accent-foreground) / 0.5)" strokeWidth="1.5" />
+      <text x="130" y="48" textAnchor="middle" fill="hsl(var(--accent-foreground))" fontSize="7" fontWeight="bold">₹</text>
+
+      {/* Upward Arrow / Growth */}
+      <path d="M220,70 L220,40 L210,50 M220,40 L230,50" stroke="hsl(var(--destructive))" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <line x1="220" y1="70" x2="220" y2="85" stroke="hsl(var(--destructive))" strokeWidth="3" />
+
+      {/* Small decorative bar chart elements */}
+      <rect x="40" y="160" width="10" height="20" fill="hsl(var(--secondary) / 0.7)" rx="2"/>
+      <rect x="55" y="145" width="10" height="35" fill="hsl(var(--secondary) / 0.7)" rx="2"/>
+      <rect x="245" y="155" width="10" height="25" fill="hsl(var(--secondary) / 0.7)" rx="2"/>
+      <rect x="260" y="135" width="10" height="45" fill="hsl(var(--secondary) / 0.7)" rx="2"/>
+
     </svg>
   );
 }
