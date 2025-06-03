@@ -13,6 +13,7 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { useState } from 'react';
 import Image from 'next/image';
 
 // Mock data for now - replace with Firestore data fetching
@@ -44,6 +45,12 @@ const mockLoans = [
 export default function DashboardPage() {
   const { user } = useAuth();
   // TODO: Replace mockLoans with Firestore data tied to the user
+  const [chartData, setChartData] = useState(null);
+  const [kpis, setKpis] = useState(null);
+
+  const fetchAnalyticsData = () => {
+    // TODO: Implement data fetching logic for charts and KPIs
+  };
 
   return (
     <div className="space-y-8">
@@ -177,6 +184,59 @@ export default function DashboardPage() {
               </ul>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Analytics Section */}
+      {mockLoans.length > 0 && (
+        <div className="mt-8 space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h2 className="text-2xl font-headline tracking-tight">
+              Loan Analytics
+            </h2>
+            <Button onClick={fetchAnalyticsData} variant="outline">
+              <TrendingUp className="mr-2 h-4 w-4" /> Fetch Latest Data
+            </Button>
+          </div>
+
+          {/* KPIs Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">Total Loans</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">2</p>{' '}
+                {/* TODO: Replace with actual KPI */}
+              </CardContent>
+            </Card>
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">Total Outstanding Principal</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">$28,000</p>{' '}
+                {/* TODO: Replace with actual KPI */}
+              </CardContent>
+            </Card>
+            {/* Add more KPI cards as needed */}
+          </div>
+
+          {/* Charts Section */}
+          <Card className="shadow-lg">
+            <CardHeader><CardTitle className="text-xl font-headline">Loan Balance Over Time</CardTitle></CardHeader>
+            <CardContent>{/* TODO: Add Line Chart Component Here */}<div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-md flex items-center justify-center text-muted-foreground">Line Chart Placeholder</div></CardContent>
+          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="shadow-lg">
+              <CardHeader><CardTitle className="text-xl font-headline">Loan Distribution by Type</CardTitle></CardHeader>
+              <CardContent>{/* TODO: Add Pie Chart Component Here */}<div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-md flex items-center justify-center text-muted-foreground">Pie Chart Placeholder</div></CardContent>
+            </Card>
+            <Card className="shadow-lg">
+              <CardHeader><CardTitle className="text-xl font-headline">Monthly Payments Overview</CardTitle></CardHeader>
+              <CardContent>{/* TODO: Add Bar Chart Component Here */}<div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-md flex items-center justify-center text-muted-foreground">Bar Chart Placeholder</div></CardContent>
+            </Card>
+          </div>
         </div>
       )}
     </div>

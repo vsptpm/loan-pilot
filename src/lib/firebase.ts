@@ -14,6 +14,7 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 const firebaseConfig = {
   apiKey: "AIzaSyA3kAPCnOz91b-H6FZ8RkAe5dN3DRbsyLo",
   authDomain: "loanpilot-ye4t5.firebaseapp.com",
+  databaseURL: "https://loanpilot-ye4t5-default-rtdb.firebaseio.com",
   projectId: "loanpilot-ye4t5",
   storageBucket: "loanpilot-ye4t5.firebasestorage.app",
   messagingSenderId: "115598394308",
