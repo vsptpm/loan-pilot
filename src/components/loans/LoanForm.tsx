@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -207,4 +208,8 @@ export function LoanForm({ onSubmit, initialData, isLoading = false, submitButto
           {submitButtonText}
         </Button>
       </form>
+    </Form>
+  );
+}
+
     
