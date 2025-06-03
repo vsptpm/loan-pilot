@@ -147,8 +147,8 @@ export default function DashboardPage() {
     }
 
     const totalOriginalPrincipal = loanSummaries.reduce((sum, s) => sum + s.originalLoan.principalAmount, 0);
-    const totalOutstanding = loanSummaries.reduce((sum, s) => sum + s.status.currentBalance, 0); // Use currentBalance from status
-    const totalPaid = totalOriginalPrincipal - totalOutstanding; // This might be an oversimplification if amountAlreadyPaid reduces principal before schedule generation
+    const totalOutstanding = loanSummaries.reduce((sum, s) => sum + s.status.currentBalance, 0);
+    const totalPaid = totalOriginalPrincipal - totalOutstanding;
     const overallPercentagePaid = totalOriginalPrincipal > 0 ? (totalPaid / totalOriginalPrincipal) * 100 : 0;
 
     let earliestDueDate: Date | null = null;
@@ -176,8 +176,8 @@ export default function DashboardPage() {
     if (loanSummaries.length === 0) return [];
     const data: { month: string; totalBalance: number }[] = [];
     const today = new Date();
-    const startDate = addMonths(today, -12); // 12 months in the past
-    const endDate = addMonths(today, 24); // 24 months in the future
+    const startDate = addMonths(today, -12); 
+    const endDate = addMonths(today, 24); 
     const numMonths = differenceInMonths(endDate, startDate) + 1;
 
     for (let i = 0; i < numMonths; i++) {
@@ -189,10 +189,9 @@ export default function DashboardPage() {
         if (entry && entry.paymentDate && parseISO(entry.paymentDate) <= currentDate) {
              monthBalance += entry.remainingBalance;
         } else if (summary.schedule.length > 0 && parseISO(summary.schedule[0].paymentDate) > currentDate) {
-            // If current date is before the first payment date of the loan
             monthBalance += summary.originalLoan.principalAmount - summary.originalLoan.amountAlreadyPaid;
         } else if(summary.status.currentBalance > 0 && paidEMIsSoFar === 0) {
-            monthBalance += summary.status.currentBalance; // If no EMIs are paid yet, use current balance
+            monthBalance += summary.status.currentBalance;
         }
       });
       data.push({
@@ -200,7 +199,7 @@ export default function DashboardPage() {
         totalBalance: parseFloat(monthBalance.toFixed(2)),
       });
     }
-    return data.filter(d => d.totalBalance > 0 || data.some(other => other.totalBalance > 0)); // Only show if there's some balance
+    return data.filter(d => d.totalBalance > 0 || data.some(other => other.totalBalance > 0));
   }, [loanSummaries]);
 
   const loanPrincipalDistributionData = useMemo(() => {
@@ -260,7 +259,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <div>
-          <h1 className="text-3xl font-headline tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-headline tracking-tight">
             Welcome, {user?.displayName || user?.email?.split('@')[0] || 'User'}!
           </h1>
           <p className="text-muted-foreground">
@@ -408,7 +407,7 @@ export default function DashboardPage() {
                 </CardTitle>
                 <CardDescription>Projected total outstanding balance.</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-4 md:p-6">
                 {loanBalanceOverTimeData.length > 0 ? (
                   <ChartContainer config={{totalBalance: {label: "Total Balance", color: "hsl(var(--chart-1))"}}} className="h-[300px] w-full">
                     <LineChart data={loanBalanceOverTimeData} margin={{left: 12, right: 12, top:5, bottom: 5}}>
@@ -433,7 +432,7 @@ export default function DashboardPage() {
                 </CardTitle>
                 <CardDescription>Breakdown of current outstanding principal by loan.</CardDescription>
               </CardHeader>
-              <CardContent className="flex items-center justify-center">
+              <CardContent className="flex items-center justify-center p-3 sm:p-4 md:p-6">
                 {loanPrincipalDistributionData.length > 0 ? (
                    <ChartContainer config={loanPrincipalDistributionData.reduce((acc, cur) => {acc[cur.name] = {label: cur.name, color: cur.fill}; return acc;}, {} as any)} className="h-[300px] w-full">
                     <PieChart>
@@ -449,7 +448,7 @@ export default function DashboardPage() {
                             formatter={(value: string) => value.length > 10 ? `${value.substring(0,10)}...` : value}
                           />
                       </Pie>
-                      <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+                      <ChartLegend content={<ChartLegendContent nameKey="name" className="flex-wrap" />} />
                     </PieChart>
                   </ChartContainer>
                 ) : (
@@ -467,7 +466,7 @@ export default function DashboardPage() {
               </CardTitle>
               <CardDescription>Total EMI payments due in the upcoming months.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 sm:p-4 md:p-6">
               {upcomingMonthlyPaymentsData.length > 0 ? (
                 <ChartContainer config={{totalEMI: {label: "Total EMI", color: "hsl(var(--chart-2))"}}} className="h-[300px] w-full">
                   <BarChart data={upcomingMonthlyPaymentsData} margin={{left: 12, right: 12, top:5, bottom: 5}}>
@@ -488,5 +487,6 @@ export default function DashboardPage() {
     </div>
   );
 }
+    
 
     
