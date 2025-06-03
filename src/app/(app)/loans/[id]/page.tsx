@@ -10,6 +10,7 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
+  CardFooter
 } from '@/components/ui/card';
 import {
   Table,
@@ -24,11 +25,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/hooks/useAuth';
-import type { Loan, AmortizationEntry, LoanStatus } from '@/types';
+import type { Loan, AmortizationEntry, LoanStatus, RecordedPrepayment, RecordedPrepaymentFormData } from '@/types';
 import { db } from '@/lib/firebase';
 import {
   doc,
   getDoc,
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  orderBy,
+  onSnapshot,
 } from 'firebase/firestore';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -40,7 +47,7 @@ import {
   calculateEMI,
   getLoanStatus
 } from '@/lib/loanUtils';
-import { LineChart as LineChartIcon, BarChart3 as BarChartIcon, Loader2, TrendingUp, Calculator, ChevronsUpDown, Check, Edit3 } from 'lucide-react';
+import { LineChart as LineChartIcon, BarChart3 as BarChartIcon, Loader2, TrendingUp, Calculator, ChevronsUpDown, Check, Edit3, Landmark as RecordIcon, ListChecks } from 'lucide-react';
 import {
   ChartContainer,
   ChartTooltip,
@@ -57,6 +64,15 @@ import {
 } from 'recharts';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { RecordPrepaymentForm } from '@/components/loans/RecordPrepaymentForm';
+import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -64,7 +80,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { parseISO, format } from 'date-fns';
+import { parseISO, format, formatISO } from 'date-fns';
 
 
 interface SimulationResults {
@@ -79,6 +95,7 @@ interface SimulationResults {
 
 export default function LoanDetailPage() {
   const { id } = useParams();
+  const loanIdString = Array.isArray(id) ? id[0] : id;
   const router = useRouter();
   const { user } = useAuth();
   const [loan, setLoan] = useState<Loan | null>(null);
@@ -92,6 +109,11 @@ export default function LoanDetailPage() {
   const [simulationResults, setSimulationResults] = useState<SimulationResults | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [openMonthSelector, setOpenMonthSelector] = useState(false);
+
+  const [isRecordPrepaymentDialogOpen, setIsRecordPrepaymentDialogOpen] = useState(false);
+  const [isRecordingPrepayment, setIsRecordingPrepayment] = useState(false);
+  const [recordedPrepayments, setRecordedPrepayments] = useState<RecordedPrepayment[]>([]);
+  const [loadingPrepayments, setLoadingPrepayments] = useState(true);
 
 
   const fetchLoan = useCallback(async (loanId: string) => {
@@ -123,15 +145,37 @@ export default function LoanDetailPage() {
   }, [user, toast, router]); 
 
   useEffect(() => {
-    if (id && user) {
-      const loanId = Array.isArray(id) ? id[0] : id;
-      fetchLoan(loanId);
-    } else if (!user && id) {
+    if (loanIdString && user) {
+      fetchLoan(loanIdString);
+    } else if (!user && loanIdString) {
        setLoading(true);
     } else {
       setLoading(false);
     }
-  }, [id, user, fetchLoan]);
+  }, [loanIdString, user, fetchLoan]);
+
+  useEffect(() => {
+    if (!user || !loanIdString) {
+      setRecordedPrepayments([]);
+      setLoadingPrepayments(false);
+      return;
+    }
+    setLoadingPrepayments(true);
+    const prepaymentsCol = collection(db, `users/${user.uid}/loans/${loanIdString}/prepayments`);
+    const q = query(prepaymentsCol, orderBy('date', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const prepayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as RecordedPrepayment));
+      setRecordedPrepayments(prepayments);
+      setLoadingPrepayments(false);
+    }, (error) => {
+      console.error("Error fetching recorded prepayments: ", error);
+      toast({ title: "Error", description: "Could not fetch recorded prepayments.", variant: "destructive" });
+      setLoadingPrepayments(false);
+    });
+    return () => unsubscribe();
+  }, [user, loanIdString, toast]);
+
 
   const monthlyEMI = useMemo(() => {
     if (!loan) return 0;
@@ -145,6 +189,8 @@ export default function LoanDetailPage() {
 
   const originalSchedule: AmortizationEntry[] = useMemo(() => {
     if (!loan) return [];
+    // IMPORTANT: The actual impact of *recorded* prepayments on this schedule is NOT YET IMPLEMENTED.
+    // This schedule is based on original loan terms and initial amountAlreadyPaid.
     return generateRepaymentSchedule(
       loan.principalAmount,
       loan.interestRate,
@@ -155,8 +201,8 @@ export default function LoanDetailPage() {
   }, [loan, initialPaidEMIsCount]);
   
   const loanStatus: LoanStatus | null = useMemo(() => {
-    if (!loan) return null; // Return null if loan is not loaded yet
-    // getLoanStatus can now handle an empty schedule internally
+    if (!loan) return null; 
+    // IMPORTANT: The actual impact of *recorded* prepayments on this status is NOT YET IMPLEMENTED.
     return getLoanStatus(loan, originalSchedule);
   }, [loan, originalSchedule]);
 
@@ -183,6 +229,30 @@ export default function LoanDetailPage() {
     }
     return options;
   }, [originalSchedule]);
+
+  const handleRecordPrepaymentSubmit = async (data: RecordedPrepaymentFormData) => {
+    if (!user || !loanIdString || !loan) {
+      toast({ title: 'Error', description: 'Cannot record prepayment. User or loan data missing.', variant: 'destructive' });
+      return;
+    }
+    setIsRecordingPrepayment(true);
+    try {
+      const prepaymentsCol = collection(db, `users/${user.uid}/loans/${loanIdString}/prepayments`);
+      await addDoc(prepaymentsCol, {
+        amount: data.amount,
+        date: formatISO(data.date, { representation: 'date' }),
+        notes: data.notes || '',
+        createdAt: serverTimestamp(),
+      });
+      toast({ title: 'Success', description: 'Prepayment recorded successfully!' });
+      setIsRecordPrepaymentDialogOpen(false);
+    } catch (error) {
+      console.error('Error recording prepayment: ', error);
+      toast({ title: 'Error', description: 'Could not record prepayment. Please try again.', variant: 'destructive' });
+    } finally {
+      setIsRecordingPrepayment(false);
+    }
+  };
 
   const remainingBalanceChartData = useMemo(() => {
     if (!originalSchedule || originalSchedule.length === 0) return [];
@@ -318,7 +388,7 @@ export default function LoanDetailPage() {
     );
   }
 
-  if (!loan || !loanStatus) { // Ensure loanStatus is also available
+  if (!loan || !loanStatus) { 
     return (
        <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
         <p className="text-lg text-muted-foreground">Loan data not available.</p>
@@ -344,21 +414,43 @@ export default function LoanDetailPage() {
     },
   };
 
-  const loanIdString = Array.isArray(id) ? id[0] : id;
 
   return (
     <div className="container mx-auto py-8 space-y-8">
       <Card className="shadow-lg">
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-3xl font-headline">{loan.name}</CardTitle>
-            {loanIdString && (
-              <Link href={`/loans/edit/${loanIdString}`} legacyBehavior passHref>
-                <Button variant="outline" size="icon" asChild>
-                  <a><Edit3 className="h-5 w-5" /></a>
-                </Button>
-              </Link>
-            )}
+          <div className="flex justify-between items-start gap-2">
+            <CardTitle className="text-3xl font-headline flex-grow">{loan.name}</CardTitle>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {loanIdString && (
+                <Link href={`/loans/edit/${loanIdString}`} legacyBehavior passHref>
+                  <Button variant="outline" size="sm" asChild className="h-9">
+                    <a><Edit3 className="mr-2 h-4 w-4" />Edit</a>
+                  </Button>
+                </Link>
+              )}
+              <Dialog open={isRecordPrepaymentDialogOpen} onOpenChange={setIsRecordPrepaymentDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9">
+                    <RecordIcon className="mr-2 h-4 w-4" /> Record Prepayment
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[480px]">
+                  <DialogHeader>
+                    <DialogTitle>Record Prepayment for {loan.name}</DialogTitle>
+                    <DialogDescription>
+                      Enter the details of your prepayment. This will be saved permanently.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <RecordPrepaymentForm
+                    onSubmit={handleRecordPrepaymentSubmit}
+                    isLoading={isRecordingPrepayment}
+                    loanStartDate={parseISO(loan.startDate)}
+                    onCancel={() => setIsRecordPrepaymentDialogOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
           <CardDescription>Detailed overview of your loan.</CardDescription>
         </CardHeader>
@@ -416,6 +508,49 @@ export default function LoanDetailPage() {
                 </div>
             </div>
         </CardContent>
+         <CardFooter className="text-xs text-muted-foreground">
+            Note: Loan overview figures do not yet reflect recorded prepayments. This will be updated in a future step.
+        </CardFooter>
+      </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-xl font-headline flex items-center">
+             <ListChecks className="mr-2 h-5 w-5 text-accent" />
+            Recorded Prepayments
+          </CardTitle>
+          <CardDescription>History of prepayments made for this loan.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingPrepayments ? (
+            <div className="flex items-center justify-center p-4">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading prepayments...
+            </div>
+          ) : recordedPrepayments.length > 0 ? (
+            <div className="max-h-96 overflow-y-auto border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recordedPrepayments.map((pp) => (
+                    <TableRow key={pp.id}>
+                      <TableCell>{formatDate(pp.date)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(pp.amount)}</TableCell>
+                      <TableCell>{pp.notes || '-'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">No prepayments recorded for this loan yet.</p>
+          )}
+        </CardContent>
       </Card>
 
       <Card className="shadow-lg">
@@ -424,7 +559,7 @@ export default function LoanDetailPage() {
              <Calculator className="mr-2 h-5 w-5 text-accent" />
             Prepayment Simulator
           </CardTitle>
-          <CardDescription>See how a prepayment could affect your loan.</CardDescription>
+          <CardDescription>See how a hypothetical prepayment could affect your loan. This does not record any payment.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
@@ -568,7 +703,7 @@ export default function LoanDetailPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-primary">Original Repayment Schedule</CardTitle>
-          <CardDescription>The projected repayment plan for this loan based on its original terms.</CardDescription>
+          <CardDescription>The projected repayment plan for this loan based on its original terms. Does not yet reflect recorded prepayments.</CardDescription>
         </CardHeader>
         <CardContent>
           {originalSchedule.length > 0 ? (
@@ -607,7 +742,7 @@ export default function LoanDetailPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-primary">Loan Visualizations</CardTitle>
-          <CardDescription>Visual breakdown of your loan repayment.</CardDescription>
+          <CardDescription>Visual breakdown of your loan repayment. Does not yet reflect recorded prepayments.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-3 sm:pt-4 md:pt-6">
           <div className="space-y-2">
@@ -642,7 +777,6 @@ export default function LoanDetailPage() {
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={(value) => `₹${value/1000}k`} tick={{ fontSize: 12 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  {/* <ChartLegend content={<ChartLegendContent />} /> */}
                   <Bar dataKey="principal" stackId="a" fill="var(--color-principal)" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="interest" stackId="a" fill="var(--color-interest)" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -656,4 +790,3 @@ export default function LoanDetailPage() {
     </div>
   );
 }
-

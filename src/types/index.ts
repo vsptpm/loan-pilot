@@ -1,3 +1,4 @@
+
 import type { Timestamp } from 'firebase/firestore';
 
 // For data input via form
@@ -63,4 +64,20 @@ export interface LoanSummary {
   nextDueDate: string | null;
   completedPercentage: number;
   amortizationSchedule: AmortizationEntry[]; // Current schedule
+}
+
+// For recording a new prepayment via form
+export interface RecordedPrepaymentFormData {
+  amount: number;
+  date: Date;
+  notes?: string;
+}
+
+// How recorded prepayments are stored in Firestore (as a subcollection of a loan)
+export interface RecordedPrepayment {
+  id: string; // Firestore document ID
+  amount: number;
+  date: string; // ISO string for the prepayment date
+  notes?: string;
+  createdAt: Timestamp; // Firestore server timestamp
 }
