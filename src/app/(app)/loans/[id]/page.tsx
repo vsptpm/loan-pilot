@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Card,
   CardHeader,
@@ -37,13 +38,11 @@ import {
   calculateTotalInterest,
   getInitialPaidEMIsCount,
 } from '@/lib/loanUtils';
-import { LineChart as LineChartIcon, BarChart3 as BarChartIcon, Loader2, TrendingUp, Calculator, ChevronsUpDown, Check } from 'lucide-react';
+import { LineChart as LineChartIcon, BarChart3 as BarChartIcon, Loader2, TrendingUp, Calculator, ChevronsUpDown, Check, Edit3 } from 'lucide-react';
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
 } from "@/components/ui/chart"
 import {
   LineChart,
@@ -53,9 +52,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend as RechartsLegend,
-  ResponsiveContainer,
 } from 'recharts';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -98,7 +94,6 @@ export default function LoanDetailPage() {
 
   const fetchLoan = useCallback(async (loanId: string) => {
     if (!user) return;
-    // setLoading(true); // Not needed here as it's set true initially and false in finally
     try {
       const loanDocRef = doc(db, `users/${user.uid}/loans`, loanId);
       const loanDocSnap = await getDoc(loanDocRef);
@@ -123,26 +118,24 @@ export default function LoanDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, toast, router, setLoan, setLoading]); // Added setLoan, setLoading to dependencies
+  }, [user, toast, router]); 
 
   useEffect(() => {
     if (id && user) {
       const loanId = Array.isArray(id) ? id[0] : id;
       fetchLoan(loanId);
     } else if (!user && id) {
-      // If user is not yet available but id is, we might be waiting for auth.
-      // setLoading(true) might be appropriate here if not handled by a global loader.
-      // However, the main AuthProvider handles global loading states.
+       setLoading(true);
     } else {
-      setLoading(false); // If no ID, or no user and no ID, stop loading.
+      setLoading(false);
     }
-  }, [id, user, fetchLoan]); // Added fetchLoan to dependencies
+  }, [id, user, fetchLoan]);
 
   const originalSchedule: AmortizationEntry[] = useMemo(() => {
     if (!loan) return [];
-    const initialPaidEMIs = getInitialPaidEMIsCount(loan.amountAlreadyPaid, 0); // EMI will be calc inside
+    const initialPaidEMIs = getInitialPaidEMIsCount(loan.amountAlreadyPaid, 0); 
     return generateRepaymentSchedule(
-      loan.principalAmount - (initialPaidEMIs > 0 ? 0 : loan.amountAlreadyPaid), // Reduce principal if amountAlreadyPaid is not N EMIs
+      loan.principalAmount - (initialPaidEMIs > 0 ? 0 : loan.amountAlreadyPaid), 
       loan.interestRate,
       loan.durationMonths,
       loan.startDate,
@@ -213,7 +206,7 @@ export default function LoanDetailPage() {
         toast({ title: "Invalid Input", description: "Please enter a valid prepayment percentage (1-100).", variant: "destructive" });
         return;
       }
-    } else { // 'amount'
+    } else { 
       parsedCustomAmount = parseFloat(prepaymentCustomAmount);
       if (isNaN(parsedCustomAmount) || parsedCustomAmount <= 0) {
         toast({ title: "Invalid Input", description: "Please enter a valid positive prepayment amount.", variant: "destructive" });
@@ -310,7 +303,7 @@ export default function LoanDetailPage() {
   if (!loan) {
     return (
        <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
-        <p className="text-lg text-muted-foreground">Loan data not available or still loading.</p>
+        <p className="text-lg text-muted-foreground">Loan data not available.</p>
       </div>
     );
   }
@@ -333,11 +326,22 @@ export default function LoanDetailPage() {
     },
   };
 
+  const loanIdString = Array.isArray(id) ? id[0] : id;
+
   return (
     <div className="container mx-auto py-8 space-y-8">
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-3xl font-headline">{loan.name}</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-3xl font-headline">{loan.name}</CardTitle>
+            {loanIdString && (
+              <Link href={`/loans/edit/${loanIdString}`} legacyBehavior passHref>
+                <Button variant="outline" size="icon" asChild>
+                  <a><Edit3 className="h-5 w-5" /></a>
+                </Button>
+              </Link>
+            )}
+          </div>
           <CardDescription>Detailed overview of your loan.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -592,7 +596,7 @@ export default function LoanDetailPage() {
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={(value) => `₹${value/1000}k`} tick={{ fontSize: 12 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <ChartLegend content={<ChartLegendContent />} />
+                  {/* <ChartLegend content={<ChartLegendContent />} /> */}
                   <Bar dataKey="principal" stackId="a" fill="var(--color-principal)" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="interest" stackId="a" fill="var(--color-interest)" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -606,3 +610,6 @@ export default function LoanDetailPage() {
     </div>
   );
 }
+
+
+    
