@@ -7,13 +7,13 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Formats a number as a currency string (USD).
+ * Formats a number as a currency string (INR).
  * @param amount The number to format.
- * @returns A string representing the formatted currency, e.g., "$1,234.56". Returns an empty string if amount is null/undefined.
+ * @returns A string representing the formatted currency, e.g., "₹1,234.56". Returns an empty string if amount is null/undefined.
  */
 export function formatCurrency(amount: number | null | undefined): string {
   if (amount == null) {
-    // Handle null or undefined, perhaps return a placeholder or empty string
+    // Handle null or undefined, return an empty string
     return ''; 
   }
   return new Intl.NumberFormat('en-US', {
@@ -33,8 +33,7 @@ export function formatDate(dateString: string | Date | null | undefined): string
   }
   try {
     const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-    // 'PP' format is like "Jul 17, 2024"
-    return format(date, 'PP'); 
+    return format(date, 'PP'); // 'PP' format is like "Jul 17, 2024"
   } catch (error) {
     // console.error("Error formatting date:", dateString, error);
     // Fallback if date parsing fails, though parseISO is robust
