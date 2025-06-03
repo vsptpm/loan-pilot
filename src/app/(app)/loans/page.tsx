@@ -3,12 +3,11 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from '@/hooks/useAuth';
-import type { Loan, AmortizationEntry } from '@/types';
+import type { Loan } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, orderBy, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
-import { PlusCircle, Edit3, Trash2, MoreVertical, Loader2, SearchX, Info } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, MoreVertical, Loader2, SearchX } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -38,7 +37,6 @@ import {
   generateAmortizationSchedule,
   getLoanStatus,
   getInitialPaidEMIsCount,
-  type LoanStatus,
 } from '@/lib/loanUtils';
 
 interface LoanDisplaySummary {
@@ -161,17 +159,6 @@ export default function LoansPage() {
           </Button>
         </Link>
       </div>
-
-      {loanDisplayData.length > 0 && ( 
-         <Alert className="mb-6 shadow-md">
-          <Info className="h-4 w-4" />
-          <AlertTitle>Loan Card Information</AlertTitle>
-          <AlertDescription>
-            Loan summaries reflect original terms, initial payments, and total recorded prepayments. 
-            For a detailed breakdown including exact interest savings from individual prepayments, please click on a loan card to view its specific detail page.
-          </AlertDescription>
-        </Alert>
-      )}
 
       {loans.length === 0 && !searchQuery ? (
         <Card className="w-full shadow-lg">

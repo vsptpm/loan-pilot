@@ -4,7 +4,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { PlusCircle, Info, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2 } from 'lucide-react';
+import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -12,11 +12,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState, useMemo } from 'react';
-import type { Loan, AmortizationEntry } from '@/types';
+import type { Loan } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import {
@@ -264,18 +263,6 @@ export default function DashboardPage() {
           </Card>
         </div>
       </div>
-
-
-      {loanSummaries.length > 0 && (
-        <Alert className="mb-6 shadow-md">
-          <Info className="h-4 w-4" />
-          <AlertTitle>Loan Summary Information</AlertTitle>
-          <AlertDescription>
-            Loan summaries and overall statistics reflect original terms, initial payments, and total recorded prepayments. 
-            For a detailed breakdown including exact interest savings from individual prepayments, please view the specific loan&apos;s detail page.
-          </AlertDescription>
-        </Alert>
-      )}
       
       {loanSummaries.length === 0 && !isLoading && (
         <Card className="w-full shadow-lg">
@@ -354,4 +341,3 @@ export default function DashboardPage() {
     
 
     
-
