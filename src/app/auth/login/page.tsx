@@ -22,3 +22,8 @@ export default function LoginPage() {
               <a className="font-medium text-primary hover:underline">Sign up</a>
             </Link>
           </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

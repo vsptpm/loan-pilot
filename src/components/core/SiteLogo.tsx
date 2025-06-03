@@ -7,4 +7,4 @@ export function SiteLogo() {
       <TrendingUp className="h-7 w-7 text-primary" />
       <span className="text-2xl font-headline font-semibold text-primary">LoanPilot</span>
     </Link>
-  
+  )}
