@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -5,10 +6,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useAuth } from '@/hooks/useAuth';
 import type { Loan } from '@/types';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import { PlusCircle, Edit3, Trash2, Eye, Landmark, Percent, CalendarDays, CircleDollarSign, MoreVertical, Loader2 } from 'lucide-react';
+import { collection, query, onSnapshot, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { PlusCircle, Edit3, Trash2, Eye, Landmark, Percent, CalendarDays, CircleDollarSign, MoreVertical, Loader2, SearchX } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,8 +26,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog"; // Removed AlertDialogTrigger as it's used inline
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -35,6 +36,8 @@ export default function LoansPage() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get('search') || '';
 
   useEffect(() => {
     if (!user) {
@@ -60,6 +63,15 @@ export default function LoansPage() {
     return () => unsubscribe();
   }, [user, toast]);
 
+  const filteredLoans = useMemo(() => {
+    if (!searchQuery) {
+      return loans;
+    }
+    return loans.filter(loan =>
+      loan.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [loans, searchQuery]);
+
   const handleDeleteLoan = async (loanId: string) => {
     if (!user) return;
     try {
@@ -82,7 +94,7 @@ export default function LoansPage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <h1 className="text-3xl font-headline tracking-tight">Your Loans</h1>
+        <h1 className="text-3xl font-headline tracking-tight">Your Loans {searchQuery && `(Results for "${searchQuery}")`}</h1>
         <Link href="/loans/add" legacyBehavior>
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Loan
@@ -90,7 +102,7 @@ export default function LoansPage() {
         </Link>
       </div>
 
-      {loans.length === 0 ? (
+      {loans.length === 0 && !searchQuery ? (
         <Card className="w-full shadow-lg">
           <CardHeader>
             <CardTitle className="font-headline text-2xl">No Loans Found</CardTitle>
@@ -108,9 +120,22 @@ export default function LoansPage() {
             </Link>
           </CardContent>
         </Card>
+      ) : filteredLoans.length === 0 && searchQuery ? (
+        <Card className="w-full shadow-lg">
+          <CardHeader>
+            <CardTitle className="font-headline text-2xl">No Loans Match Your Search</CardTitle>
+            <CardDescription>No loans found for "{searchQuery}". Try a different search term or clear the search.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center text-center">
+             <SearchX className="h-24 w-24 text-muted-foreground mb-6" />
+            <p className="mb-4 text-muted-foreground">
+              Please try searching with different keywords or <Link href="/loans" className="text-primary hover:underline">clear the search</Link> to see all loans.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {loans.map((loan) => (
+          {filteredLoans.map((loan) => (
             <Card key={loan.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
               <CardHeader>
                 <div className="flex justify-between items-start">
