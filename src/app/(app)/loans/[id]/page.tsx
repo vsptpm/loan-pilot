@@ -29,7 +29,7 @@ import {
   doc,
   getDoc,
 } from 'firebase/firestore';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
   generateAmortizationSchedule as generateRepaymentSchedule,
@@ -37,7 +37,7 @@ import {
   calculateTotalInterest,
   getInitialPaidEMIsCount,
 } from '@/lib/loanUtils';
-import { LineChart as LineChartIcon, BarChart3 as BarChartIcon, Loader2, TrendingUp, Calculator } from 'lucide-react';
+import { LineChart as LineChartIcon, BarChart3 as BarChartIcon, Loader2, TrendingUp, Calculator, ChevronsUpDown, Check } from 'lucide-react';
 import {
   ChartContainer,
   ChartTooltip,
@@ -57,7 +57,16 @@ import {
   Legend as RechartsLegend,
   ResponsiveContainer,
 } from 'recharts';
-import { parseISO } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { parseISO, format } from 'date-fns';
 
 
 interface SimulationResults {
@@ -84,6 +93,7 @@ export default function LoanDetailPage() {
   const [prepaymentAfterMonth, setPrepaymentAfterMonth] = useState('');
   const [simulationResults, setSimulationResults] = useState<SimulationResults | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [openMonthSelector, setOpenMonthSelector] = useState(false);
 
 
   const fetchLoan = async (loanId: string) => {
@@ -133,6 +143,29 @@ export default function LoanDetailPage() {
     );
   }, [loan]);
 
+  const prepaymentMonthOptions = useMemo(() => {
+    const options = [
+      { value: "0", label: "Before any EMIs (Start of Loan)" }
+    ];
+    if (originalSchedule) {
+      originalSchedule.forEach(entry => {
+        try {
+          options.push({
+            value: entry.month.toString(),
+            label: `After EMI ${entry.month} (${format(parseISO(entry.paymentDate), 'MMM yyyy')})`
+          });
+        } catch (e) {
+          console.error("Error formatting date for prepayment option:", entry.paymentDate, e);
+          options.push({
+            value: entry.month.toString(),
+            label: `After EMI ${entry.month} (Invalid Date)`
+          });
+        }
+      });
+    }
+    return options;
+  }, [originalSchedule]);
+
   const remainingBalanceChartData = useMemo(() => {
     if (!originalSchedule || originalSchedule.length === 0) return [];
     return originalSchedule.map(entry => ({
@@ -156,7 +189,13 @@ export default function LoanDetailPage() {
       return;
     }
 
+    if (prepaymentAfterMonth === '') {
+      toast({ title: "Invalid Input", description: "Please select when the prepayment should occur.", variant: "destructive" });
+      return;
+    }
     const afterMonth = parseInt(prepaymentAfterMonth, 10);
+
+
     let parsedPercentage: number | undefined;
     let parsedCustomAmount: number | undefined;
     let prepaymentAmountValue: number;
@@ -176,7 +215,8 @@ export default function LoanDetailPage() {
     }
 
     if (isNaN(afterMonth) || afterMonth < 0 || afterMonth > originalSchedule.length) {
-      toast({ title: "Invalid Input", description: `Prepayment month must be between 0 and ${originalSchedule.length}.`, variant: "destructive" });
+      // This validation might be redundant if dropdown forces valid selection, but good for safety.
+      toast({ title: "Invalid Input", description: `Selected prepayment timing is invalid.`, variant: "destructive" });
       return;
     }
     
@@ -195,7 +235,7 @@ export default function LoanDetailPage() {
         principalAtPrepaymentTime = entryBeforePrepayment.remainingBalance;
     }
 
-    if (principalAtPrepaymentTime <= 0) { // Loan already cleared at this point
+    if (principalAtPrepaymentTime <= 0) { 
         toast({ title: "Loan Cleared", description: "Loan balance is already zero or negative at the selected point.", variant: "default" });
         setSimulationResults({
             newClosureDate: originalSchedule[afterMonth-1]?.paymentDate || loan.startDate,
@@ -214,7 +254,6 @@ export default function LoanDetailPage() {
     } else if (parsedCustomAmount !== undefined) {
       prepaymentAmountValue = parsedCustomAmount;
     } else {
-      // Should not happen if validation is correct
       toast({ title: "Error", description: "Prepayment value could not be determined.", variant: "destructive" });
       setIsSimulating(false);
       return;
@@ -381,16 +420,52 @@ export default function LoanDetailPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="prepaymentAfterMonth">Prepayment After EMI Number</Label>
-              <Input
-                id="prepaymentAfterMonth"
-                type="number"
-                placeholder="e.g., 6 (or 0 for start)"
-                value={prepaymentAfterMonth}
-                onChange={(e) => setPrepaymentAfterMonth(e.target.value)}
-                disabled={isSimulating}
-              />
-              <p className="text-xs text-muted-foreground">Enter 0 to simulate prepayment before any EMIs.</p>
+              <Label htmlFor="prepaymentAfterMonth">Prepayment Timing</Label>
+              <Popover open={openMonthSelector} onOpenChange={setOpenMonthSelector}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openMonthSelector}
+                    className="w-full justify-between font-normal"
+                    disabled={isSimulating}
+                  >
+                    {prepaymentAfterMonth
+                      ? prepaymentMonthOptions.find(option => option.value === prepaymentAfterMonth)?.label
+                      : "Select EMI timing..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search EMI timing..." />
+                    <CommandList>
+                      <CommandEmpty>No timing found.</CommandEmpty>
+                      <CommandGroup>
+                        {prepaymentMonthOptions.map((option) => (
+                          <CommandItem
+                            key={option.value}
+                            value={option.label} 
+                            onSelect={() => {
+                              setPrepaymentAfterMonth(option.value);
+                              setOpenMonthSelector(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                prepaymentAfterMonth === option.value ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {option.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">Select when the prepayment should occur.</p>
             </div>
           </div>
           <Button onClick={handleSimulatePrepayment} disabled={isSimulating || !loan} className="w-full sm:w-auto">
@@ -521,3 +596,5 @@ export default function LoanDetailPage() {
     </div>
   );
 }
+
+    
