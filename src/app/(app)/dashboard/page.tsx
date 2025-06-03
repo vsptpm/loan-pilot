@@ -4,7 +4,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { PlusCircle, TrendingUp, ListChecks, Loader2, PieChart as PieChartIcon, BarChart2, LineChart as LineChartIcon } from 'lucide-react';
+import { PlusCircle, TrendingUp, ListChecks, Loader2, PieChart as PieChartIcon, BarChart2, LineChart as LineChartIcon, Info } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from '@/components/ui/progress';
 import { useEffect, useState, useMemo } from 'react';
 // import Image from 'next/image'; // No longer using next/image for this specific part
@@ -111,12 +112,15 @@ export default function DashboardPage() {
     return loans.map(loan => {
       const monthlyEMI = calculateEMI(loan.principalAmount, loan.interestRate, loan.durationMonths);
       const initialPaidEMIs = getInitialPaidEMIsCount(loan.amountAlreadyPaid, monthlyEMI);
+      // IMPORTANT: Dashboard summaries DO NOT fetch/use recordedPrepayments for individual loans here for performance.
+      // The schedule generated here is based on original terms + amountAlreadyPaid only.
       const schedule = generateAmortizationSchedule(
         loan.principalAmount,
         loan.interestRate,
         loan.durationMonths,
         loan.startDate,
         initialPaidEMIs
+        // No recordedPrepayments passed here
       );
       const status = getLoanStatus(loan, schedule);
       
@@ -146,7 +150,7 @@ export default function DashboardPage() {
     }
 
     const totalOriginalPrincipal = loanSummaries.reduce((sum, s) => sum + s.originalLoan.principalAmount, 0);
-    const totalOutstanding = loanSummaries.reduce((sum, s) => sum + s.status.currentBalance, 0);
+    const totalOutstanding = loanSummaries.reduce((sum, s) => sum + s.status.currentBalance, 0); // Based on simplified summaries
     const totalPaid = totalOriginalPrincipal - totalOutstanding;
     const overallPercentagePaid = totalOriginalPrincipal > 0 ? (totalPaid / totalOriginalPrincipal) * 100 : 0;
 
@@ -172,6 +176,7 @@ export default function DashboardPage() {
   }, [loanSummaries]);
 
   const loanBalanceOverTimeData = useMemo(() => {
+    // This chart uses simplified schedules from loanSummaries, so it won't reflect recorded prepayments.
     if (loanSummaries.length === 0) return [];
     const data: { month: string; totalBalance: number }[] = [];
     const today = new Date();
@@ -190,6 +195,7 @@ export default function DashboardPage() {
         } else if (summary.schedule.length > 0 && parseISO(summary.schedule[0].paymentDate) > currentDate) {
             monthBalance += summary.originalLoan.principalAmount - summary.originalLoan.amountAlreadyPaid;
         } else if(summary.status.currentBalance > 0 && paidEMIsSoFar === 0) {
+            // If no EMIs paid by date, but there is a current balance from loanStatus (based on initial amounts)
             monthBalance += summary.status.currentBalance;
         }
       });
@@ -202,6 +208,7 @@ export default function DashboardPage() {
   }, [loanSummaries]);
 
   const loanPrincipalDistributionData = useMemo(() => {
+     // Based on simplified loanSummaries.status.currentBalance
     if (loanSummaries.length === 0 || overallStats.totalOutstanding === 0) return [];
     return loanSummaries
       .filter(summary => summary.status.currentBalance > 0)
@@ -213,6 +220,7 @@ export default function DashboardPage() {
   }, [loanSummaries, overallStats.totalOutstanding]);
 
   const upcomingMonthlyPaymentsData = useMemo(() => {
+    // Based on simplified loanSummaries schedule
     if (loanSummaries.length === 0) return [];
     const data: { month: string; totalEMI: number }[] = [];
     const today = new Date();
@@ -225,7 +233,7 @@ export default function DashboardPage() {
       let monthEMI = 0;
 
       loanSummaries.forEach(summary => {
-        if (summary.status.currentBalance > 0) {
+        if (summary.status.currentBalance > 0) { // Only consider loans with outstanding balance from simplified summary
           const nextPayment = summary.schedule.find(
             e => !e.isPaid && e.paymentDate && parseISO(e.paymentDate) >= today && getYear(parseISO(e.paymentDate)) === targetYear && getMonth(parseISO(e.paymentDate)) === targetMonth
           );
@@ -272,6 +280,18 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      {loanSummaries.length > 0 && (
+        <Alert className="mb-6 shadow-md">
+          <Info className="h-4 w-4" />
+          <AlertTitle>Loan Summary Information</AlertTitle>
+          <AlertDescription>
+            The loan summaries and overall statistics displayed on this dashboard are based on original loan terms and any &apos;amount already paid&apos; at the start.
+            They do not yet reflect individually recorded prepayments. For the most up-to-date figures including all prepayments,
+            please view the specific loan&apos;s detail page.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {loanSummaries.length === 0 && !isLoading && (
         <Card className="w-full shadow-lg">
           <CardHeader>
@@ -308,7 +328,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <CardDescription>
-                  Next payment due: {summary.nextDueDate ? formatDate(summary.nextDueDate) : 'N/A'}
+                  Next payment due: {summary.nextDueDate ? formatDate(summary.nextDueDate) : (summary.status.currentBalance === 0 ? 'Paid Off' : 'N/A')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 flex-grow">
@@ -323,7 +343,7 @@ export default function DashboardPage() {
                 <div>
                   <Progress value={summary.completedPercentage} className="h-3 mt-1" />
                   <p className="text-xs text-muted-foreground mt-1 text-right">
-                    {summary.completedPercentage}% paid
+                    {summary.completedPercentage.toFixed(2)}% paid
                   </p>
                 </div>
               </CardContent>
@@ -338,15 +358,15 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle className="font-headline flex items-center">
                 <TrendingUp className="mr-2 h-5 w-5 text-accent" />
-                Overall Progress
+                Overall Progress (Simplified)
               </CardTitle>
               <CardDescription>
-                A summary of your combined loan repayment.
+                A summary of your combined loan repayment based on initial terms.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Total Outstanding: {formatCurrency(overallStats.totalOutstanding)}</p>
-              <p className="text-muted-foreground">Overall % Paid: {overallStats.overallPercentagePaid}%</p>
+              <p className="text-muted-foreground">Total Outstanding (Simplified): {formatCurrency(overallStats.totalOutstanding)}</p>
+              <p className="text-muted-foreground">Overall % Paid (Simplified): {overallStats.overallPercentagePaid}%</p>
               <Progress value={overallStats.overallPercentagePaid} className="h-4 mt-2" />
             </CardContent>
           </Card>
@@ -357,7 +377,7 @@ export default function DashboardPage() {
                 Next Actions
               </CardTitle>
               <CardDescription>
-                Upcoming due dates and important tasks.
+                Upcoming due dates based on initial terms.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -369,7 +389,7 @@ export default function DashboardPage() {
                   </li>
                 ) : (
                    <li className="flex items-center text-muted-foreground">
-                     No upcoming payments or all loans paid off.
+                     No upcoming payments or all loans paid off (based on simplified view).
                    </li>
                 )}
                  <li className="flex items-center">
@@ -384,7 +404,8 @@ export default function DashboardPage() {
 
       {loanSummaries.length > 0 && (
         <div className="mt-8 space-y-8">
-          <h2 className="text-2xl font-headline tracking-tight">Loan Analytics</h2>
+          <h2 className="text-2xl font-headline tracking-tight">Loan Analytics (Simplified Overview)</h2>
+           <p className="text-sm text-muted-foreground -mt-6">These charts are based on initial loan terms and do not reflect individually recorded prepayments. For detailed analytics, visit the specific loan page.</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="shadow-lg">
               <CardHeader>
@@ -392,7 +413,7 @@ export default function DashboardPage() {
                   <LineChartIcon className="mr-2 h-5 w-5 text-accent" />
                   Loan Balance Over Time
                 </CardTitle>
-                <CardDescription>Projected total outstanding balance.</CardDescription>
+                <CardDescription>Projected total outstanding balance (simplified).</CardDescription>
               </CardHeader>
               <CardContent className="p-3 sm:p-4 md:p-6">
                 {loanBalanceOverTimeData.length > 0 ? (
@@ -417,7 +438,7 @@ export default function DashboardPage() {
                   <PieChartIcon className="mr-2 h-5 w-5 text-accent" />
                   Loan Principal Distribution
                 </CardTitle>
-                <CardDescription>Breakdown of current outstanding principal by loan.</CardDescription>
+                <CardDescription>Breakdown of current outstanding principal by loan (simplified).</CardDescription>
               </CardHeader>
               <CardContent className="flex items-center justify-center p-3 sm:p-4 md:p-6">
                 {loanPrincipalDistributionData.length > 0 ? (
@@ -451,7 +472,7 @@ export default function DashboardPage() {
                 <BarChart2 className="mr-2 h-5 w-5 text-accent" />
                 Upcoming Monthly Payments
               </CardTitle>
-              <CardDescription>Total EMI payments due in the upcoming months.</CardDescription>
+              <CardDescription>Total EMI payments due in upcoming months (simplified).</CardDescription>
             </CardHeader>
             <CardContent className="p-3 sm:p-4 md:p-6">
               {upcomingMonthlyPaymentsData.length > 0 ? (
@@ -481,3 +502,4 @@ export default function DashboardPage() {
     
 
     
+

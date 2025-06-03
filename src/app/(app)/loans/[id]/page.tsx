@@ -162,11 +162,11 @@ export default function LoanDetailPage() {
     }
     setLoadingPrepayments(true);
     const prepaymentsCol = collection(db, `users/${user.uid}/loans/${loanIdString}/prepayments`);
-    const q = query(prepaymentsCol, orderBy('date', 'desc'));
+    const q = query(prepaymentsCol, orderBy('date', 'desc')); // Keep 'desc' for display, sort 'asc' for schedule generation
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const prepayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as RecordedPrepayment));
-      setRecordedPrepayments(prepayments);
+      setRecordedPrepayments(prepayments); // Store as fetched (desc for display)
       setLoadingPrepayments(false);
     }, (error) => {
       console.error("Error fetching recorded prepayments: ", error);
@@ -187,32 +187,32 @@ export default function LoanDetailPage() {
       return getInitialPaidEMIsCount(loan.amountAlreadyPaid, monthlyEMI);
   }, [loan, monthlyEMI]);
 
-  const originalSchedule: AmortizationEntry[] = useMemo(() => {
+  const currentAmortizationSchedule: AmortizationEntry[] = useMemo(() => {
     if (!loan) return [];
-    // IMPORTANT: The actual impact of *recorded* prepayments on this schedule is NOT YET IMPLEMENTED.
-    // This schedule is based on original loan terms and initial amountAlreadyPaid.
+    // Sort prepayments by date ascending for schedule generation
+    const sortedPrepaymentsForSchedule = [...recordedPrepayments].sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
     return generateRepaymentSchedule(
       loan.principalAmount,
       loan.interestRate,
       loan.durationMonths,
       loan.startDate,
-      initialPaidEMIsCount
+      initialPaidEMIsCount,
+      sortedPrepaymentsForSchedule 
     );
-  }, [loan, initialPaidEMIsCount]);
+  }, [loan, initialPaidEMIsCount, recordedPrepayments]);
   
   const loanStatus: LoanStatus | null = useMemo(() => {
-    if (!loan) return null; 
-    // IMPORTANT: The actual impact of *recorded* prepayments on this status is NOT YET IMPLEMENTED.
-    return getLoanStatus(loan, originalSchedule);
-  }, [loan, originalSchedule]);
+    if (!loan || !currentAmortizationSchedule) return null; 
+    return getLoanStatus(loan, currentAmortizationSchedule);
+  }, [loan, currentAmortizationSchedule]);
 
 
   const prepaymentMonthOptions = useMemo(() => {
     const options = [
-      { value: "0", label: "Before any EMIs (Start of Loan)" }
+      { value: "0", label: "Before any scheduled EMIs (Start of Loan)" }
     ];
-    if (originalSchedule) {
-      originalSchedule.forEach(entry => {
+    if (currentAmortizationSchedule) { // Use current, potentially prepayment-adjusted schedule
+      currentAmortizationSchedule.forEach(entry => {
         try {
           options.push({
             value: entry.month.toString(),
@@ -228,7 +228,7 @@ export default function LoanDetailPage() {
       });
     }
     return options;
-  }, [originalSchedule]);
+  }, [currentAmortizationSchedule]);
 
   const handleRecordPrepaymentSubmit = async (data: RecordedPrepaymentFormData) => {
     if (!user || !loanIdString || !loan) {
@@ -246,6 +246,7 @@ export default function LoanDetailPage() {
       });
       toast({ title: 'Success', description: 'Prepayment recorded successfully!' });
       setIsRecordPrepaymentDialogOpen(false);
+      // The schedule will re-calculate automatically due to recordedPrepayments state change -> useMemo
     } catch (error) {
       console.error('Error recording prepayment: ', error);
       toast({ title: 'Error', description: 'Could not record prepayment. Please try again.', variant: 'destructive' });
@@ -255,24 +256,24 @@ export default function LoanDetailPage() {
   };
 
   const remainingBalanceChartData = useMemo(() => {
-    if (!originalSchedule || originalSchedule.length === 0) return [];
-    return originalSchedule.map(entry => ({
+    if (!currentAmortizationSchedule || currentAmortizationSchedule.length === 0) return [];
+    return currentAmortizationSchedule.map(entry => ({
       month: `Month ${entry.month}`,
       balance: entry.remainingBalance,
     }));
-  }, [originalSchedule]);
+  }, [currentAmortizationSchedule]);
 
   const principalInterestChartData = useMemo(() => {
-    if (!originalSchedule || originalSchedule.length === 0) return [];
-    return originalSchedule.map(entry => ({
+    if (!currentAmortizationSchedule || currentAmortizationSchedule.length === 0) return [];
+    return currentAmortizationSchedule.map(entry => ({
       month: `Month ${entry.month}`,
       principal: entry.principalPaid,
       interest: entry.interestPaid,
     }));
-  }, [originalSchedule]);
+  }, [currentAmortizationSchedule]);
 
   const handleSimulatePrepayment = () => {
-    if (!loan || originalSchedule.length === 0) {
+    if (!loan || currentAmortizationSchedule.length === 0) {
       toast({ title: "Error", description: "Loan data not available for simulation.", variant: "destructive" });
       return;
     }
@@ -301,9 +302,9 @@ export default function LoanDetailPage() {
         return;
       }
     }
-
-    if (isNaN(afterMonth) || afterMonth < 0 || afterMonth > originalSchedule.length) {
-      toast({ title: "Invalid Input", description: `Selected prepayment timing is invalid.`, variant: "destructive" });
+    // Use currentAmortizationSchedule for validation against afterMonth
+    if (isNaN(afterMonth) || afterMonth < 0 || afterMonth > currentAmortizationSchedule.length) {
+      toast({ title: "Invalid Input", description: `Selected prepayment timing is invalid for the current schedule. Max month: ${currentAmortizationSchedule.length}.`, variant: "destructive" });
       return;
     }
     
@@ -311,11 +312,17 @@ export default function LoanDetailPage() {
 
     let principalAtPrepaymentTime: number;
     if (afterMonth === 0) {
-        principalAtPrepaymentTime = loan.principalAmount - loan.amountAlreadyPaid;
+        // Balance before the first payment of the current schedule
+        if (currentAmortizationSchedule.length > 0) {
+            const firstEntry = currentAmortizationSchedule[0];
+            principalAtPrepaymentTime = firstEntry.remainingBalance + firstEntry.principalPaid; // Balance *before* first scheduled payment
+        } else { // Loan is already paid off or has no schedule
+            principalAtPrepaymentTime = 0;
+        }
     } else {
-        const entryBeforePrepayment = originalSchedule[afterMonth -1];
+        const entryBeforePrepayment = currentAmortizationSchedule[afterMonth -1];
         if(!entryBeforePrepayment) {
-            toast({title: "Error", description: "Invalid month for prepayment.", variant: "destructive"});
+            toast({title: "Error", description: "Invalid month for prepayment in current schedule.", variant: "destructive"});
             setIsSimulating(false);
             return;
         }
@@ -323,14 +330,15 @@ export default function LoanDetailPage() {
     }
 
     if (principalAtPrepaymentTime <= 0) { 
-        toast({ title: "Loan Cleared", description: "Loan balance is already zero or negative at the selected point.", variant: "default" });
+        toast({ title: "Loan Cleared", description: "Loan balance is already zero or negative at the selected point in the current schedule.", variant: "default" });
+        const scheduleToUse = afterMonth === 0 ? [] : currentAmortizationSchedule.slice(0, afterMonth);
         setSimulationResults({
-            newClosureDate: originalSchedule[afterMonth-1]?.paymentDate || loan.startDate,
+            newClosureDate: scheduleToUse[scheduleToUse.length-1]?.paymentDate || loan.startDate,
             interestSaved: 0,
-            originalTotalInterest: calculateTotalInterest(originalSchedule),
-            newTotalInterest: calculateTotalInterest(originalSchedule.slice(0, afterMonth)),
-            simulatedSchedule: originalSchedule.slice(0, afterMonth),
-            oldClosureDate: originalSchedule[originalSchedule.length-1]?.paymentDate || null,
+            originalTotalInterest: calculateTotalInterest(currentAmortizationSchedule),
+            newTotalInterest: calculateTotalInterest(scheduleToUse),
+            simulatedSchedule: scheduleToUse,
+            oldClosureDate: currentAmortizationSchedule[currentAmortizationSchedule.length-1]?.paymentDate || null,
         });
         setIsSimulating(false);
         return;
@@ -352,19 +360,20 @@ export default function LoanDetailPage() {
         return;
     }
 
+    // Pass originalLoanData for base parameters, currentAmortizationSchedule as the schedule to simulate on top of
     const simulatedSchedule = simulatePrepayment(
-      loan,
-      originalSchedule,
+      loan, // Pass the full loan object which includes all necessary original terms
+      currentAmortizationSchedule,
       prepaymentAmountValue,
       afterMonth
     );
 
-    const originalTotalInterest = calculateTotalInterest(originalSchedule);
+    const originalTotalInterest = calculateTotalInterest(currentAmortizationSchedule);
     const newTotalInterest = calculateTotalInterest(simulatedSchedule);
     const interestSaved = parseFloat((originalTotalInterest - newTotalInterest).toFixed(2));
     
-    const newClosureDate = simulatedSchedule.length > 0 ? simulatedSchedule[simulatedSchedule.length - 1].paymentDate : null;
-    const oldClosureDate = originalSchedule.length > 0 ? originalSchedule[originalSchedule.length - 1].paymentDate : null;
+    const newClosureDate = simulatedSchedule.length > 0 ? simulatedSchedule[simulatedSchedule.length - 1].paymentDate : (currentAmortizationSchedule[0]?.paymentDate || null) ;
+    const oldClosureDate = currentAmortizationSchedule.length > 0 ? currentAmortizationSchedule[currentAmortizationSchedule.length - 1].paymentDate : null;
 
     setSimulationResults({
       newClosureDate,
@@ -379,7 +388,7 @@ export default function LoanDetailPage() {
   };
 
 
-  if (loading) {
+  if (loading || loadingPrepayments) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -439,7 +448,7 @@ export default function LoanDetailPage() {
                   <DialogHeader>
                     <DialogTitle>Record Prepayment for {loan.name}</DialogTitle>
                     <DialogDescription>
-                      Enter the details of your prepayment. This will be saved permanently.
+                      Enter the details of your prepayment. This will be saved and reflected in loan calculations.
                     </DialogDescription>
                   </DialogHeader>
                   <RecordPrepaymentForm
@@ -452,7 +461,7 @@ export default function LoanDetailPage() {
               </Dialog>
             </div>
           </div>
-          <CardDescription>Detailed overview of your loan.</CardDescription>
+          <CardDescription>Detailed overview of your loan, reflecting all recorded prepayments.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
@@ -465,20 +474,20 @@ export default function LoanDetailPage() {
                   <span className="font-medium">{loan.interestRate}%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Loan Term:</span>
+                  <span className="text-muted-foreground">Original Loan Term:</span>
                   <span className="font-medium">{loan.durationMonths} months</span>
                 </div>
                  <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount Initially Paid:</span>
+                  <span className="text-muted-foreground">Amount Initially Paid ( lumpsum):</span>
                   <span className="font-medium">{formatCurrency(loan.amountAlreadyPaid)}</span>
                 </div>
                 <div className="flex justify-between">
                     <span className="text-muted-foreground">Outstanding Balance (as of today):</span>
                     <span className="font-medium">{formatCurrency(loanStatus.currentBalance)}</span>
                 </div>
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">Next Scheduled Payment:</span>
-                    <span className="font-medium">{loanStatus.nextDueDate ? formatDate(loanStatus.nextDueDate) : 'N/A'}</span>
+                 <div className="flex justify-between">
+                    <span className="text-muted-foreground">EMIs Due (as of today):</span>
+                    <span className="font-medium">{loanStatus.paidEMIsCount} / {currentAmortizationSchedule.length}</span>
                 </div>
             </div>
             <div className="space-y-3">
@@ -487,7 +496,7 @@ export default function LoanDetailPage() {
                   <span className="font-medium">{formatDate(loan.startDate)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Monthly EMI:</span>
+                  <span className="text-muted-foreground">Scheduled Monthly EMI:</span>
                   <span className="font-medium">{formatCurrency(monthlyEMI)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -498,19 +507,16 @@ export default function LoanDetailPage() {
                   <span className="text-muted-foreground">Total Interest Paid (as of today):</span>
                   <span className="font-medium">{formatCurrency(loanStatus.totalInterestPaid)}</span>
                 </div>
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">EMIs Due (as of today):</span>
-                    <span className="font-medium">{loanStatus.paidEMIsCount} / {originalSchedule.length}</span>
+                 <div className="flex justify-between">
+                    <span className="text-muted-foreground">Next Scheduled Payment:</span>
+                    <span className="font-medium">{loanStatus.nextDueDate ? formatDate(loanStatus.nextDueDate) : (loanStatus.currentBalance === 0 ? 'Paid Off' : 'N/A')}</span>
                 </div>
                 <div className="flex justify-between">
                     <span className="text-muted-foreground">Progress (as of today):</span>
-                    <span className="font-medium">{loanStatus.completedPercentage}%</span>
+                    <span className="font-medium">{loanStatus.completedPercentage.toFixed(2)}%</span>
                 </div>
             </div>
         </CardContent>
-         <CardFooter className="text-xs text-muted-foreground">
-            Note: Loan overview figures do not yet reflect recorded prepayments. This will be updated in a future step.
-        </CardFooter>
       </Card>
 
       <Card className="shadow-lg">
@@ -519,7 +525,7 @@ export default function LoanDetailPage() {
              <ListChecks className="mr-2 h-5 w-5 text-accent" />
             Recorded Prepayments
           </CardTitle>
-          <CardDescription>History of prepayments made for this loan.</CardDescription>
+          <CardDescription>History of prepayments made for this loan. These are factored into the loan details and schedule above.</CardDescription>
         </CardHeader>
         <CardContent>
           {loadingPrepayments ? (
@@ -537,6 +543,7 @@ export default function LoanDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {/* Display recordedPrepayments as fetched (desc) */}
                   {recordedPrepayments.map((pp) => (
                     <TableRow key={pp.id}>
                       <TableCell>{formatDate(pp.date)}</TableCell>
@@ -559,7 +566,7 @@ export default function LoanDetailPage() {
              <Calculator className="mr-2 h-5 w-5 text-accent" />
             Prepayment Simulator
           </CardTitle>
-          <CardDescription>See how a hypothetical prepayment could affect your loan. This does not record any payment.</CardDescription>
+          <CardDescription>See how an additional hypothetical prepayment could affect your loan. This simulation is based on the current loan status including all recorded prepayments.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
@@ -576,7 +583,7 @@ export default function LoanDetailPage() {
             >
                 <div className="flex items-center space-x-2">
                     <RadioGroupItem value="percentage" id="type-percentage" />
-                    <Label htmlFor="type-percentage" className="font-normal cursor-pointer">By Percentage</Label>
+                    <Label htmlFor="type-percentage" className="font-normal cursor-pointer">By Percentage of Current Balance</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                     <RadioGroupItem value="amount" id="type-amount" />
@@ -615,7 +622,7 @@ export default function LoanDetailPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="prepaymentAfterMonth">Prepayment Timing</Label>
+              <Label htmlFor="prepaymentAfterMonth">Prepayment Timing (in current schedule)</Label>
               <Popover open={openMonthSelector} onOpenChange={setOpenMonthSelector}>
                 <PopoverTrigger asChild>
                   <Button
@@ -625,17 +632,17 @@ export default function LoanDetailPage() {
                     className="w-full justify-between font-normal"
                     disabled={isSimulating}
                   >
-                    {prepaymentAfterMonth
+                    {prepaymentAfterMonth && prepaymentMonthOptions.find(option => option.value === prepaymentAfterMonth)
                       ? prepaymentMonthOptions.find(option => option.value === prepaymentAfterMonth)?.label
                       : "Select EMI timing..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-60 overflow-y-auto">
                   <Command>
                     <CommandInput placeholder="Search EMI timing..." />
                     <CommandList>
-                      <CommandEmpty>No timing found.</CommandEmpty>
+                      <CommandEmpty>No timing found in current schedule.</CommandEmpty>
                       <CommandGroup>
                         {prepaymentMonthOptions.map((option) => (
                           <CommandItem
@@ -660,7 +667,7 @@ export default function LoanDetailPage() {
                   </Command>
                 </PopoverContent>
               </Popover>
-              <p className="text-xs text-muted-foreground">Select when the prepayment should occur.</p>
+              <p className="text-xs text-muted-foreground">Select when the prepayment should occur in the current (possibly prepayment-adjusted) schedule.</p>
             </div>
           </div>
           <Button onClick={handleSimulatePrepayment} disabled={isSimulating || !loan} className="w-full sm:w-auto">
@@ -670,29 +677,29 @@ export default function LoanDetailPage() {
 
           {simulationResults && (
             <div className="mt-6 p-4 border rounded-md bg-muted/50 space-y-3">
-              <h3 className="text-lg font-semibold font-headline">Simulation Results:</h3>
+              <h3 className="text-lg font-semibold font-headline">Simulation Results (on top of current state):</h3>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Original Estimated Closure Date:</span>
+                <span className="text-muted-foreground">Current Estimated Closure Date:</span>
                 <span className="font-medium">{simulationResults.oldClosureDate ? formatDate(simulationResults.oldClosureDate) : 'N/A'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">New Estimated Closure Date:</span>
+                <span className="text-muted-foreground">New Estimated Closure Date (with this simulation):</span>
                 <span className="font-medium text-primary">{simulationResults.newClosureDate ? formatDate(simulationResults.newClosureDate) : 'N/A'}</span>
               </div>
                <div className="flex justify-between">
-                <span className="text-muted-foreground">Original Total Interest:</span>
+                <span className="text-muted-foreground">Total Interest (current schedule):</span>
                 <span className="font-medium">{formatCurrency(simulationResults.originalTotalInterest)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">New Total Interest:</span>
+                <span className="text-muted-foreground">Total Interest (with this simulation):</span>
                 <span className="font-medium">{formatCurrency(simulationResults.newTotalInterest)}</span>
               </div>
               <div className="flex justify-between text-lg">
-                <span className="text-muted-foreground">Total Interest Saved:</span>
+                <span className="text-muted-foreground">Further Interest Saved (by this simulation):</span>
                 <span className="font-semibold text-green-600 dark:text-green-500">{formatCurrency(simulationResults.interestSaved)}</span>
               </div>
               <p className="text-xs text-muted-foreground pt-2">
-                Note: This simulation assumes your monthly EMI payment remains the same, and the loan term is reduced by the prepayment.
+                Note: This simulation assumes your monthly EMI payment remains the same, and the loan term is further reduced by this hypothetical prepayment.
               </p>
             </div>
           )}
@@ -702,11 +709,11 @@ export default function LoanDetailPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-primary">Original Repayment Schedule</CardTitle>
-          <CardDescription>The projected repayment plan for this loan based on its original terms. Does not yet reflect recorded prepayments.</CardDescription>
+          <CardTitle className="text-xl font-semibold text-primary">Current Repayment Schedule</CardTitle>
+          <CardDescription>The projected repayment plan, reflecting all recorded prepayments. {initialPaidEMIsCount > 0 ? `${initialPaidEMIsCount} initial EMI(s) marked as paid from 'Amount Initially Paid'.` : ''}</CardDescription>
         </CardHeader>
         <CardContent>
-          {originalSchedule.length > 0 ? (
+          {currentAmortizationSchedule.length > 0 ? (
             <div className="max-h-[calc(theme(spacing.96)_+_theme(spacing.12))] overflow-y-auto border rounded-md">
               <Table>
                 <TableHeader>
@@ -717,24 +724,34 @@ export default function LoanDetailPage() {
                     <TableHead className="text-right">Principal</TableHead>
                     <TableHead className="text-right">Interest</TableHead>
                     <TableHead className="text-right">Balance</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {originalSchedule.map((entry) => (
-                    <TableRow key={entry.month} className={entry.isPaid ? 'bg-primary/5' : ''}>
+                  {currentAmortizationSchedule.map((entry) => (
+                    <TableRow key={entry.month} className={cn(entry.isPaid ? 'bg-primary/5' : '', isBefore(parseISO(entry.paymentDate), new Date()) && !entry.isPaid ? 'bg-yellow-500/10' : '')}>
                       <TableCell>{entry.month}</TableCell>
                       <TableCell>{formatDate(entry.paymentDate)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(entry.payment)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(entry.principalPaid)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(entry.interestPaid)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(entry.remainingBalance)}</TableCell>
+                       <TableCell className="text-center">
+                        {entry.isPaid ? (
+                            <span className="text-xs font-semibold px-2 py-1 rounded-full bg-green-100 text-green-700">Paid</span>
+                        ) : isBefore(parseISO(entry.paymentDate), new Date()) && !entry.isPaid ? (
+                            <span className="text-xs font-semibold px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">Due</span>
+                        ) : (
+                            <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-100 text-gray-700">Upcoming</span>
+                        )}
+                        </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
           ) : (
-            <p className="text-muted-foreground">No repayment schedule available for this loan.</p>
+            <p className="text-muted-foreground">No repayment schedule available. Loan might be fully paid off or has zero duration.</p>
           )}
         </CardContent>
       </Card>
@@ -742,7 +759,7 @@ export default function LoanDetailPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-primary">Loan Visualizations</CardTitle>
-          <CardDescription>Visual breakdown of your loan repayment. Does not yet reflect recorded prepayments.</CardDescription>
+          <CardDescription>Visual breakdown of your loan repayment, reflecting all recorded prepayments.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-3 sm:pt-4 md:pt-6">
           <div className="space-y-2">
@@ -790,3 +807,4 @@ export default function LoanDetailPage() {
     </div>
   );
 }
+
