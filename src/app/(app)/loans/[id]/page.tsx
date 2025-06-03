@@ -38,6 +38,7 @@ import {
   onSnapshot,
   updateDoc,
   increment,
+  deleteDoc,
 } from 'firebase/firestore';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -49,7 +50,18 @@ import {
   calculateEMI,
   getLoanStatus
 } from '@/lib/loanUtils';
-import { LineChart as LineChartIcon, BarChart3 as BarChartIcon, Loader2, TrendingUp, Calculator, ChevronsUpDown, Check, Edit3, Landmark as RecordIcon, ListChecks } from 'lucide-react';
+import { LineChart as LineChartIcon, BarChart3 as BarChartIcon, Loader2, TrendingUp, Calculator, ChevronsUpDown, Check, Edit3, Landmark as RecordIcon, ListChecks, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   ChartContainer,
   ChartTooltip,
@@ -82,7 +94,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { parseISO, format, formatISO, isBefore, isEqual } from 'date-fns';
+import { parseISO, format, formatISO, isBefore, isEqual, isAfter } from 'date-fns';
 
 
 interface SimulationResults {
@@ -116,40 +128,11 @@ export default function LoanDetailPage() {
   const [isRecordingPrepayment, setIsRecordingPrepayment] = useState(false);
   const [recordedPrepayments, setRecordedPrepayments] = useState<RecordedPrepayment[]>([]);
   const [loadingPrepayments, setLoadingPrepayments] = useState(true);
+  const [deletingPrepaymentId, setDeletingPrepaymentId] = useState<string | null>(null);
 
-
-  const fetchLoan = useCallback(async (loanId: string) => {
-    if (!user) return;
-    try {
-      const loanDocRef = doc(db, `users/${user.uid}/loans`, loanId);
-      const loanDocSnap = await getDoc(loanDocRef);
-
-      if (loanDocSnap.exists()) {
-        setLoan({ id: loanDocSnap.id, ...loanDocSnap.data() } as Loan);
-      } else {
-        toast({
-          title: 'Error',
-          description: 'Loan not found.',
-          variant: 'destructive',
-        });
-        router.push('/loans');
-      }
-    } catch (error) {
-      console.error('Error fetching loan:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch loan details.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [user, toast, router]); 
 
   useEffect(() => {
     if (loanIdString && user) {
-      // Listen for real-time updates to the loan document itself
-      // This is important for totalPrepaymentAmount updates
       const loanDocRef = doc(db, `users/${user.uid}/loans`, loanIdString);
       const unsubscribeLoan = onSnapshot(loanDocRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -165,13 +148,6 @@ export default function LoanDetailPage() {
         setLoading(false);
       });
       
-      // setLoading(false) is handled by the onSnapshot callback now
-      // Original fetchLoan is removed to avoid duplicate fetching if onSnapshot handles initial load.
-      // However, onSnapshot might not fire immediately if data is cached.
-      // A one-time getDoc might still be useful for initial load speed, then rely on onSnapshot.
-      // For simplicity here, relying on onSnapshot for updates and initial load.
-      // If initial load is slow, could re-introduce a getDoc then unsubscribeLoan on change.
-
       return () => unsubscribeLoan();
 
     } else if (!user && loanIdString) {
@@ -179,7 +155,7 @@ export default function LoanDetailPage() {
     } else {
       setLoading(false);
     }
-  }, [loanIdString, user, toast, router]); // fetchLoan removed from dependencies for now
+  }, [loanIdString, user, toast, router]); 
 
   useEffect(() => {
     if (!user || !loanIdString) {
@@ -229,7 +205,6 @@ export default function LoanDetailPage() {
   
   const loanStatus: LoanStatus | null = useMemo(() => {
     if (!loan || !currentAmortizationSchedule) return null; 
-    // For detail page, forSummaryView is false (or omitted, defaulting to false)
     return getLoanStatus(loan, currentAmortizationSchedule, false);
   }, [loan, currentAmortizationSchedule]);
 
@@ -241,7 +216,6 @@ export default function LoanDetailPage() {
     if (currentAmortizationSchedule) { 
       currentAmortizationSchedule.forEach(entry => {
         try {
-          // Ensure entry.paymentDate is valid before parsing
           if(entry.paymentDate && typeof entry.paymentDate === 'string'){
             options.push({
               value: entry.month.toString(),
@@ -280,7 +254,6 @@ export default function LoanDetailPage() {
         createdAt: serverTimestamp(),
       });
 
-      // Atomically update totalPrepaymentAmount on the loan document
       const loanDocRef = doc(db, `users/${user.uid}/loans`, loanIdString);
       await updateDoc(loanDocRef, {
         totalPrepaymentAmount: increment(data.amount)
@@ -295,6 +268,31 @@ export default function LoanDetailPage() {
       setIsRecordingPrepayment(false);
     }
   };
+
+  const handleDeletePrepayment = async (prepaymentId: string, prepaymentAmount: number) => {
+    if (!user || !loanIdString) {
+      toast({ title: 'Error', description: 'User or loan data missing.', variant: 'destructive' });
+      return;
+    }
+    setDeletingPrepaymentId(prepaymentId);
+    try {
+      const prepaymentDocRef = doc(db, `users/${user.uid}/loans/${loanIdString}/prepayments`, prepaymentId);
+      await deleteDoc(prepaymentDocRef);
+
+      const loanDocRef = doc(db, `users/${user.uid}/loans`, loanIdString);
+      await updateDoc(loanDocRef, {
+        totalPrepaymentAmount: increment(-prepaymentAmount)
+      });
+
+      toast({ title: 'Success', description: 'Prepayment deleted successfully.' });
+    } catch (error) {
+      console.error('Error deleting prepayment:', error);
+      toast({ title: 'Error', description: 'Could not delete prepayment. Please try again.', variant: 'destructive' });
+    } finally {
+      setDeletingPrepaymentId(null);
+    }
+  };
+
 
   const remainingBalanceChartData = useMemo(() => {
     if (!currentAmortizationSchedule || currentAmortizationSchedule.length === 0) return [];
@@ -352,18 +350,13 @@ export default function LoanDetailPage() {
 
     let principalAtPrepaymentTime: number;
     if (afterMonth === 0) {
-        // Prepaying before the first EMI in the current schedule
-        // The balance is the starting balance of the *current* schedule's first entry
         if (currentAmortizationSchedule.length > 0) {
             const firstEntry = currentAmortizationSchedule[0];
-            // The balance before the first EMI payment is (remainingBalance of first entry + principalPaid of first entry)
             principalAtPrepaymentTime = firstEntry.remainingBalance + firstEntry.principalPaid; 
         } else { 
-            // This case should ideally not happen if loan is active. If schedule is empty, implies loan is paid off.
             principalAtPrepaymentTime = 0;
         }
     } else {
-        // Prepaying after a specific EMI in the current schedule
         const entryBeforePrepayment = currentAmortizationSchedule[afterMonth -1];
         if(!entryBeforePrepayment) {
             toast({title: "Error", description: "Invalid month for prepayment in current schedule.", variant: "destructive"});
@@ -405,7 +398,7 @@ export default function LoanDetailPage() {
     }
 
     const simulatedSchedule = simulatePrepayment(
-      loan, // Pass the base loan object
+      loan, 
       currentAmortizationSchedule,
       prepaymentAmountValue,
       afterMonth
@@ -583,6 +576,7 @@ export default function LoanDetailPage() {
                     <TableHead>Date</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead>Notes</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -591,6 +585,33 @@ export default function LoanDetailPage() {
                       <TableCell>{formatDate(pp.date)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(pp.amount)}</TableCell>
                       <TableCell>{pp.notes || '-'}</TableCell>
+                      <TableCell className="text-center">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" disabled={deletingPrepaymentId === pp.id}>
+                              {deletingPrepaymentId === pp.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the prepayment of {formatCurrency(pp.amount)} made on {formatDate(pp.date)}.
+                                The loan's total prepayment amount will be updated accordingly.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeletePrepayment(pp.id, pp.amount)}
+                                className="bg-destructive hover:bg-destructive/90"
+                              >
+                                Delete Prepayment
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
