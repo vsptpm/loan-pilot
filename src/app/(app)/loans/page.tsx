@@ -27,6 +27,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle as UIDialogTitle, // Renamed to avoid conflict with CardTitle
+  AlertDialogTrigger, // Added AlertDialogTrigger here
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { NoLoansFoundIllustration } from '@/components/illustrations/NoLoansFoundIllustration';
@@ -290,4 +291,3 @@ export default function LoansPage() {
     </div>
   );
 }
-
