@@ -26,7 +26,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle as UIDialogTitle,
+  AlertDialogTitle as UIDialogTitle, // Renamed to avoid conflict
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
@@ -180,7 +180,7 @@ export default function LoansPage() {
             <CardDescription>Start managing your finances by adding your first loan.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center text-center">
-             <NoLoansFoundIllustration className="mb-6 rounded-md" width={300} height={200} />
+             <NoLoansFoundIllustration className="mb-6 rounded-md" width={300} height={200} data-ai-hint="folder empty" />
             <p className="mb-4 text-muted-foreground">
               You haven&apos;t added any loans yet. Click the button above to get started.
             </p>
@@ -198,7 +198,7 @@ export default function LoansPage() {
             <CardDescription>No loans found for &quot;{searchQuery}&quot;. Try a different search term or clear the search.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center text-center">
-             <SearchX className="h-24 w-24 text-muted-foreground mb-6" />
+             <SearchX className="h-24 w-24 text-muted-foreground mb-6" data-ai-hint="magnifying glass" />
             <p className="mb-4 text-muted-foreground">
               Please try searching with different keywords or <Link href="/loans" className="text-primary hover:underline">clear the search</Link> to see all loans.
             </p>
@@ -233,7 +233,7 @@ export default function LoansPage() {
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" onClick={(e) => { e.stopPropagation(); /* Stop propagation for menu content as well if needed */ }}>
                             <DropdownMenuItem 
                               asChild 
                               onClick={(e) => { 
@@ -255,7 +255,7 @@ export default function LoansPage() {
                             </AlertDialogTrigger>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                        <AlertDialogContent>
+                        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                           <AlertDialogHeader>
                             <UIDialogTitle>Are you sure?</UIDialogTitle>
                             <AlertDialogDescription>
