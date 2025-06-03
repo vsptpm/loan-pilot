@@ -28,13 +28,15 @@ import {
   Mail,
   Bell,
   Loader2,
+  Landmark, // Added Landmark icon
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-// Updated menuItems to only include Dashboard
+// Updated menuItems to include Dashboard and Loans
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/loans', label: 'Loans', icon: Landmark }, // Added Loans item
 ];
 
 const generalItems = [
@@ -88,7 +90,7 @@ export default function AppLayout({
                   <Link href={item.href} legacyBehavior passHref>
                     <SidebarMenuButton
                       asChild
-                      isActive={pathname === item.href || (item.href === '/dashboard' && pathname.startsWith('/dashboard'))}
+                      isActive={pathname.startsWith(item.href)} // Updated isActive logic
                       tooltip={{ children: item.label, side: 'right', align: 'center' }}
                     >
                       <a>
