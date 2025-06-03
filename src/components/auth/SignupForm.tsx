@@ -21,7 +21,7 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
-  displayName: z.string().min(2, { message: 'Display name must be at least 2 characters.' }).max(50, { message: 'Display name must be 50 characters or less.' }),
+  fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }).max(50, { message: 'Full name must be 50 characters or less.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   confirmPassword: z.string(),
@@ -36,7 +36,7 @@ export function SignupForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      displayName: '',
+      fullName: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -48,7 +48,7 @@ export function SignupForm() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       await updateProfile(userCredential.user, {
-        displayName: values.displayName,
+        displayName: values.fullName, // Store fullName in Firebase's displayName
       });
       toast({ title: 'Signup Successful', description: 'Welcome to LoanPilot! You are now logged in.' });
       // useRouter redirect is handled by AuthProvider
@@ -68,10 +68,10 @@ export function SignupForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
-          name="displayName"
+          name="fullName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Display Name</FormLabel>
+              <FormLabel>Full Name</FormLabel>
               <FormControl>
                 <Input placeholder="e.g., John Doe" {...field} />
               </FormControl>
@@ -132,4 +132,3 @@ export function SignupForm() {
     </Form>
   );
 }
-
