@@ -27,7 +27,8 @@ import {
   Search,
   Loader2,
   Landmark,
-  Calculator, // Added Calculator icon
+  Calculator, 
+  NotebookPen, // Added NotebookPen icon
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -41,6 +42,7 @@ const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/loans', label: 'Loans', icon: Landmark },
   { href: '/prepayment-simulator', label: 'Prepayment Simulator', icon: Calculator },
+  { href: '/emi-calculator', label: 'EMI Calculator', icon: NotebookPen },
 ];
 
 const generalItems = [
@@ -77,7 +79,7 @@ export default function AppLayout({
     const q = query(loansCol);
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const userLoans = snapshot.docs.map(doc => ({ id: doc.id, name: (doc.data() as { name: string }).name }));
+      const userLoans = snapshot.docs.map(docSnap => ({ id: docSnap.id, name: (docSnap.data() as { name: string }).name }));
       setAllLoansForSuggestions(userLoans);
     }, (error) => {
       console.error("Error fetching loans for suggestions: ", error);
@@ -243,7 +245,7 @@ export default function AppLayout({
                   <Link href={item.href} legacyBehavior passHref>
                     <SidebarMenuButton
                       asChild
-                      isActive={pathname === item.href || (item.href === "/loans" && pathname.startsWith("/loans")) || (item.href === "/prepayment-simulator" && pathname === "/prepayment-simulator") }
+                      isActive={pathname === item.href || (item.href === "/loans" && pathname.startsWith("/loans")) || (item.href === "/prepayment-simulator" && pathname === "/prepayment-simulator") || (item.href === "/emi-calculator" && pathname === "/emi-calculator")}
                       tooltip={{ children: item.label, side: 'right', align: 'center' }}
                     >
                       <a>
@@ -361,3 +363,4 @@ export default function AppLayout({
     </SidebarProvider>
   );
 }
+
