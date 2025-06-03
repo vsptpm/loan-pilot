@@ -25,8 +25,6 @@ import {
   HelpCircle,
   LogOut,
   Search,
-  Mail,
-  Bell,
   Loader2,
   Landmark,
 } from 'lucide-react';
@@ -149,8 +147,6 @@ export default function AppLayout({
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-    // Suggestion logic depends on the new value
-    // Re-evaluate filteredSuggestions based on 'value' before checking its length for setShowSuggestions
     const currentFiltered = allLoansForSuggestions
       .filter(loan => loan.name.toLowerCase().includes(value.toLowerCase()))
       .slice(0, 5);
@@ -166,7 +162,7 @@ export default function AppLayout({
   useEffect(() => {
     if (searchTerm.trim() && filteredSuggestions.length > 0 && document.activeElement === searchInputRef.current) {
       setShowSuggestions(true);
-    } else if (!searchTerm.trim() && showSuggestions) { // Only hide if it was previously shown
+    } else if (!searchTerm.trim() && showSuggestions) { 
       setShowSuggestions(false);
     }
   }, [searchTerm, filteredSuggestions, showSuggestions]);
@@ -201,8 +197,6 @@ export default function AppLayout({
         } else {
           handleSearch();
         }
-        // setShowSuggestions(false); // Already handled in handleSuggestionClick/handleSearch
-        // setActiveSuggestionIndex(-1); // Reset index
       } else if (e.key === 'Escape') {
         setShowSuggestions(false);
         setActiveSuggestionIndex(-1);
@@ -221,14 +215,13 @@ export default function AppLayout({
 
   useEffect(() => {
     if (justSearchedRef.current) {
-      justSearchedRef.current = false; // Reset flag, searchTerm is already cleared
+      justSearchedRef.current = false; 
       return;
     }
 
     if (pathname === '/loans') {
       setSearchTerm(searchParams.get('search') || '');
     } else {
-      // If not on /loans page and not just searched, clear search term
       setSearchTerm('');
     }
   }, [pathname, searchParams]);
@@ -292,67 +285,60 @@ export default function AppLayout({
       </Sidebar>
       <SidebarInset>
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container flex h-16 items-center justify-between px-4 md:px-8">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="md:hidden" />
-              <div className="relative hidden md:block">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  <Input
-                    ref={searchInputRef}
-                    placeholder="Search loans by name..."
-                    className="pl-10 pr-4 h-10 w-64 lg:w-96"
-                    value={searchTerm}
-                    onChange={handleSearchInputChange}
-                    onKeyDown={handleSearchKeyDown}
-                    onFocus={handleSearchFocus}
-                    aria-autocomplete="list"
-                    aria-expanded={showSuggestions && filteredSuggestions.length > 0}
-                    aria-controls="suggestions-listbox"
-                    aria-activedescendant={activeSuggestionIndex >= 0 ? `suggestion-${activeSuggestionIndex}` : undefined}
-                  />
-                  <kbd className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden h-6 select-none items-center gap-1 rounded border bg-muted px-2 font-mono text-[10px] font-medium text-muted-foreground opacity-100 sm:flex">
-                    <span className="text-xs">⌘</span>F
-                  </kbd>
-                </div>
+          <div className="container flex h-16 items-center gap-x-4 px-4 md:px-8">
+            
+            <SidebarTrigger className="md:hidden flex-shrink-0" />
 
-                {showSuggestions && filteredSuggestions.length > 0 && (
-                  <ul
-                    ref={suggestionsContainerRef}
-                    id="suggestions-listbox"
-                    className="absolute z-50 mt-1 w-64 lg:w-96 rounded-md border bg-popover text-popover-foreground shadow-lg max-h-60 overflow-y-auto"
-                    role="listbox"
-                  >
-                    {filteredSuggestions.map((suggestion, index) => (
-                      <li
-                        key={suggestion.id}
-                        id={`suggestion-${index}`}
-                        role="option"
-                        aria-selected={index === activeSuggestionIndex}
-                        className={cn(
-                          "px-3 py-2 text-sm cursor-pointer hover:bg-accent focus:bg-accent outline-none",
-                          index === activeSuggestionIndex && "bg-accent"
-                        )}
-                        onMouseDown={() => handleSuggestionClick(suggestion.name)} // Use onMouseDown to fire before blur
-                        onMouseEnter={() => setActiveSuggestionIndex(index)}
-                      >
-                        {suggestion.name}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+            <div className="relative flex-grow">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  ref={searchInputRef}
+                  placeholder="Search loans by name..."
+                  className="pl-10 pr-4 h-10 w-full"
+                  value={searchTerm}
+                  onChange={handleSearchInputChange}
+                  onKeyDown={handleSearchKeyDown}
+                  onFocus={handleSearchFocus}
+                  aria-autocomplete="list"
+                  aria-expanded={showSuggestions && filteredSuggestions.length > 0}
+                  aria-controls="suggestions-listbox"
+                  aria-activedescendant={activeSuggestionIndex >= 0 ? `suggestion-${activeSuggestionIndex}` : undefined}
+                />
+                <kbd className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden h-6 select-none items-center gap-1 rounded border bg-muted px-2 font-mono text-[10px] font-medium text-muted-foreground opacity-100 sm:flex">
+                  <span className="text-xs">⌘</span>F
+                </kbd>
               </div>
+
+              {showSuggestions && filteredSuggestions.length > 0 && (
+                <ul
+                  ref={suggestionsContainerRef}
+                  id="suggestions-listbox"
+                  className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-lg max-h-60 overflow-y-auto"
+                  role="listbox"
+                >
+                  {filteredSuggestions.map((suggestion, index) => (
+                    <li
+                      key={suggestion.id}
+                      id={`suggestion-${index}`}
+                      role="option"
+                      aria-selected={index === activeSuggestionIndex}
+                      className={cn(
+                        "px-3 py-2 text-sm cursor-pointer hover:bg-accent focus:bg-accent outline-none",
+                        index === activeSuggestionIndex && "bg-accent"
+                      )}
+                      onMouseDown={() => handleSuggestionClick(suggestion.name)} 
+                      onMouseEnter={() => setActiveSuggestionIndex(index)}
+                    >
+                      {suggestion.name}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-            <div className="flex items-center gap-3">
+            
+            <div className="flex items-center gap-3 flex-shrink-0">
               <ThemeToggle />
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                <Mail className="h-5 w-5" />
-                <span className="sr-only">Messages</span>
-              </Button>
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                <Bell className="h-5 w-5" />
-                <span className="sr-only">Notifications</span>
-              </Button>
               <div className="flex items-center gap-2">
                 <Avatar className="h-9 w-9">
                   <AvatarImage src={user?.photoURL || `https://placehold.co/40x40.png`} alt={user?.displayName || 'User'} />
@@ -373,4 +359,3 @@ export default function AppLayout({
     </SidebarProvider>
   );
 }
-
