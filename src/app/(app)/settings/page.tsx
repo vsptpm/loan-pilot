@@ -10,7 +10,7 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, UserCircle, LockKeyhole, Eye, EyeOff, Save } from 'lucide-react';
@@ -19,7 +19,6 @@ import { auth } from '@/lib/firebase';
 
 const profileFormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }).max(50, { message: 'Full name is too long.' }),
-  photoURL: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -49,7 +48,6 @@ export default function SettingsPage() {
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       fullName: '',
-      photoURL: '',
     },
   });
 
@@ -66,7 +64,6 @@ export default function SettingsPage() {
     if (user) {
       profileForm.reset({
         fullName: user.displayName || '',
-        photoURL: user.photoURL || '',
       });
     }
   }, [user, profileForm]);
@@ -82,7 +79,7 @@ export default function SettingsPage() {
     try {
       await updateProfile(user, {
         displayName: values.fullName,
-        photoURL: values.photoURL || null, 
+        // photoURL is no longer updated from this form
       });
       toast({ title: 'Success', description: 'Profile updated successfully!' });
        // The AuthProvider will pick up changes via onAuthStateChanged.
@@ -148,12 +145,12 @@ export default function SettingsPage() {
             <UserCircle className="h-6 w-6 text-primary" />
             <CardTitle className="text-xl font-headline">Profile Information</CardTitle>
           </div>
-          <CardDescription>Update your display name and profile picture URL.</CardDescription>
+          <CardDescription>Update your display name.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center space-x-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={profileForm.watch('photoURL') || user?.photoURL || undefined} alt={profileForm.watch('fullName') || user?.displayName || "User"} data-ai-hint="profile person"/>
+              <AvatarImage src={user?.photoURL || undefined} alt={profileForm.watch('fullName') || user?.displayName || "User"} data-ai-hint="profile person"/>
               <AvatarFallback className="text-2xl bg-muted">
                 {getInitials(profileForm.watch('fullName') || user?.displayName)}
               </AvatarFallback>
@@ -175,24 +172,6 @@ export default function SettingsPage() {
                     <FormControl>
                       <Input placeholder="Your full name" {...field} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={profileForm.control}
-                name="photoURL"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Photo URL</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="url" 
-                        placeholder="https://example.com/your-image.png" 
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>Optional. Enter the URL of your profile picture.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
