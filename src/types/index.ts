@@ -65,3 +65,15 @@ export interface SimulationResults {
   simulatedSchedule: AmortizationEntry[];
   oldClosureDate: string | null;
 }
+
+// For "What If" Analyzer results
+export interface WhatIfAnalysisResults {
+  originalProjectedClosureDate: string | null;
+  originalTotalInterest: number;
+  originalMonthlyEMI: number;
+  newProjectedClosureDate: string | null;
+  newTotalInterestPaid: number; // Total interest from the point of change with new EMI
+  newSchedule: AmortizationEntry[];
+  totalInterestSaved: number;
+  timeSavedInMonths: number;
+}

@@ -1,6 +1,6 @@
 
-import type { Loan, AmortizationEntry, LoanFormData, RecordedPrepayment } from '@/types';
-import { addMonths, formatISO, parseISO, differenceInCalendarMonths, isBefore, isEqual, isAfter } from 'date-fns';
+import type { Loan, AmortizationEntry, LoanFormData, RecordedPrepayment, WhatIfAnalysisResults } from '@/types';
+import { addMonths, formatISO, parseISO, differenceInCalendarMonths, isBefore, isEqual, isAfter, differenceInMonths } from 'date-fns';
 
 /**
  * Calculates the monthly EMI for a loan.
@@ -570,5 +570,85 @@ export function simulatePrepayment(
 export function calculateTotalInterest(schedule: AmortizationEntry[]): number {
   if (!schedule || schedule.length === 0) return 0;
   return schedule.reduce((total, entry) => total + entry.interestPaid, 0);
+}
+
+/**
+ * Simulates the impact of paying a new, potentially higher, EMI on a loan from a certain point.
+ * @param currentBalance The outstanding loan balance at the point the new EMI starts.
+ * @param annualRate The loan's annual interest rate (percentage).
+ * @param newMonthlyEMI The new EMI amount.
+ * @param startDateForNewSchedule The date (ISO string) from which the new EMI payments begin. This is usually the date of the *next* scheduled EMI after which the change is made.
+ * @param originalEmiForInterestCalculation The EMI amount used for interest calc if new EMI is not provided or valid.
+ * @returns An object containing the new projected schedule, closure date, and total interest paid.
+ */
+export function simulateNewEMI(
+  currentBalance: number,
+  annualRate: number,
+  newMonthlyEMI: number,
+  startDateForNewSchedule: string // This should be the due date of the *first* payment with the new EMI
+): Pick<WhatIfAnalysisResults, 'newSchedule' | 'newProjectedClosureDate' | 'newTotalInterestPaid' | 'timeSavedInMonths'> & { monthsToRepay: number } {
+
+  const newSchedule: AmortizationEntry[] = [];
+  if (currentBalance <= 0) {
+    return { newSchedule, newProjectedClosureDate: startDateForNewSchedule, newTotalInterestPaid: 0, monthsToRepay: 0, timeSavedInMonths: 0 };
+  }
+
+  const monthlyRate = annualRate / 100 / 12;
+  
+  // Validate new EMI: It must be greater than the first month's interest if rate > 0
+  if (monthlyRate > 0 && newMonthlyEMI <= currentBalance * monthlyRate) {
+    console.warn("New EMI is not enough to cover interest. Loan will not be repaid.");
+     return { newSchedule: [], newProjectedClosureDate: null, newTotalInterestPaid: 0, monthsToRepay: Infinity, timeSavedInMonths: 0 };
+  }
+
+
+  let balance = currentBalance;
+  let totalInterestForNewSchedule = 0;
+  let monthCount = 0;
+  const maxIterations = 1200; // Max 100 years, safety break
+
+  while (balance > 0.01 && monthCount < maxIterations) {
+    monthCount++;
+    const interestForMonth = monthlyRate > 0 ? parseFloat((balance * monthlyRate).toFixed(2)) : 0;
+    let principalPaidThisMonth = parseFloat((newMonthlyEMI - interestForMonth).toFixed(2));
+    let actualPaymentThisMonth = newMonthlyEMI;
+
+    if (principalPaidThisMonth < 0 && monthlyRate > 0) { // Should not happen if EMI is validated
+        principalPaidThisMonth = 0;
+    }
+
+    if (balance - principalPaidThisMonth <= 0.01) { // Final payment
+      principalPaidThisMonth = balance;
+      actualPaymentThisMonth = parseFloat((principalPaidThisMonth + interestForMonth).toFixed(2));
+    }
+
+    balance = parseFloat((balance - principalPaidThisMonth).toFixed(2));
+    balance = Math.max(0, balance);
+    totalInterestForNewSchedule += interestForMonth;
+
+    const paymentDate = formatISO(addMonths(parseISO(startDateForNewSchedule), monthCount - 1), { representation: 'date' });
+    
+    newSchedule.push({
+      month: monthCount,
+      paymentDate: paymentDate,
+      payment: actualPaymentThisMonth,
+      principalPaid: principalPaidThisMonth,
+      interestPaid: interestForMonth,
+      remainingBalance: balance,
+      isPaid: false, // This is a simulation
+    });
+
+    if (balance <= 0.01) break;
+  }
+  
+  const newClosureDate = newSchedule.length > 0 ? newSchedule[newSchedule.length - 1].paymentDate : null;
+
+  return {
+    newSchedule,
+    newProjectedClosureDate: newClosureDate,
+    newTotalInterestPaid: parseFloat(totalInterestForNewSchedule.toFixed(2)),
+    monthsToRepay: monthCount,
+    timeSavedInMonths: 0, // This will be calculated on the page by comparing with original
+  };
 }
 

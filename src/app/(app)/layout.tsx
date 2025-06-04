@@ -28,7 +28,8 @@ import {
   Loader2,
   Landmark,
   Calculator, 
-  NotebookPen, // Added NotebookPen icon
+  NotebookPen,
+  Lightbulb, // Added Lightbulb icon
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -43,6 +44,7 @@ const menuItems = [
   { href: '/loans', label: 'Loans', icon: Landmark },
   { href: '/prepayment-simulator', label: 'Prepayment Simulator', icon: Calculator },
   { href: '/emi-calculator', label: 'EMI Calculator', icon: NotebookPen },
+  { href: '/what-if-analyzer', label: 'What-if Analyzer', icon: Lightbulb },
 ];
 
 const generalItems = [
@@ -245,7 +247,7 @@ export default function AppLayout({
                   <Link href={item.href} legacyBehavior passHref>
                     <SidebarMenuButton
                       asChild
-                      isActive={pathname === item.href || (item.href === "/loans" && pathname.startsWith("/loans")) || (item.href === "/prepayment-simulator" && pathname === "/prepayment-simulator") || (item.href === "/emi-calculator" && pathname === "/emi-calculator")}
+                      isActive={pathname === item.href || (item.href === "/loans" && pathname.startsWith("/loans")) || (item.href === "/prepayment-simulator" && pathname === "/prepayment-simulator") || (item.href === "/emi-calculator" && pathname === "/emi-calculator") || (item.href === "/what-if-analyzer" && pathname === "/what-if-analyzer")}
                       tooltip={{ children: item.label, side: 'right', align: 'center' }}
                     >
                       <a>
