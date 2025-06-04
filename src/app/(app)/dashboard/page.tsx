@@ -377,7 +377,7 @@ export default function DashboardPage() {
               </Card>
             )}
           </div>
-           {(dashboardStats.highestInterestLoan && dashboardStats.highestInterestLoan.id === dashboardStats.lowestInterestLoan?.id && !dashboardStats.upcomingMilestone && activeLoanSummaries.length === 1) && (
+           {(dashboardStats.highestInterestLoan && dashboardStats.highestInterestLoan.id === dashboardStats.lowestInterestLoan?.id && !dashboardStats.upcomingMilestone && loanSummaries.filter(s => s.status.currentBalance > 0.01).length === 1) && (
               <p className="text-xs text-center text-muted-foreground mt-2">You have only one active loan, so it's listed as both highest and lowest interest.</p>
             )}
         </div>
