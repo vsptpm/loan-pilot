@@ -353,7 +353,7 @@ export default function LoanDetailPage() {
               <Card className="shadow-md rounded-xl">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Original Principal</CardTitle>
-                  <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
+                  <CircleDollarSign className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold leading-tight">{formatCurrency(loan.principalAmount)}</div>
@@ -362,7 +362,7 @@ export default function LoanDetailPage() {
               <Card className="shadow-md rounded-xl">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Scheduled Monthly EMI</CardTitle>
-                  <Repeat className="h-4 w-4 text-muted-foreground" />
+                  <Repeat className="h-4 w-4 text-accent-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold leading-tight">{formatCurrency(monthlyEMI)}</div>
@@ -371,7 +371,7 @@ export default function LoanDetailPage() {
               <Card className="shadow-md rounded-xl">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Outstanding Balance</CardTitle>
-                  <Wallet className="h-4 w-4 text-muted-foreground" />
+                  <Wallet className="h-4 w-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold leading-tight">{formatCurrency(loanStatus.currentBalance)}</div>
@@ -380,7 +380,7 @@ export default function LoanDetailPage() {
               <Card className="shadow-md rounded-xl">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">EMIs Paid</CardTitle>
-                  <ListChecks className="h-4 w-4 text-muted-foreground" />
+                  <ListChecks className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold leading-tight">{loanStatus.paidEMIsCount} / {currentAmortizationSchedule.length || loan.durationMonths}</div>
@@ -392,7 +392,7 @@ export default function LoanDetailPage() {
                <Card className="shadow-md rounded-xl">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Amount Payable</CardTitle>
-                  <ReceiptText className="h-4 w-4 text-muted-foreground" />
+                  <ReceiptText className="h-4 w-4 text-accent-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold leading-tight">{formatCurrency(totalAmountPayable)}</div>
@@ -575,3 +575,4 @@ export default function LoanDetailPage() {
     
 
     
+
