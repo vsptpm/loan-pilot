@@ -1,6 +1,6 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { Edit3, ListChecks as RecordIcon, CircleDollarSign, Repeat, Wallet, ListChecks, ReceiptText } from 'lucide-react'; // Using ListChecks for RecordIcon as well if it's similar.
+import { Edit3, ListChecks as RecordIcon, CircleDollarSign, Repeat, Wallet, ListChecks, ReceiptText, Percent, Download } from 'lucide-react';
 
 export default function LoanDetailLoading() {
   return (
@@ -13,6 +13,7 @@ export default function LoanDetailLoading() {
             <div className="flex items-center gap-2 flex-shrink-0">
               <Skeleton className="h-9 w-20 rounded-md" /> {/* Edit Button */}
               <Skeleton className="h-9 w-44 rounded-md" /> {/* Record Prepayment Button */}
+              <Skeleton className="h-9 w-32 rounded-md" /> {/* Export CSV Button */}
             </div>
           </div>
           <Skeleton className="h-4 w-full sm:w-3/4 rounded" /> {/* Card Description */}
@@ -20,8 +21,8 @@ export default function LoanDetailLoading() {
         <div className="p-6 pt-0 space-y-6">
           {/* Metric Cards Skeleton */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className={`shadow-md rounded-xl bg-card p-4 ${i === 5 ? 'md:col-span-2 lg:col-span-1' : ''}`}> {/* Adjust last item span */}
+            {[1, 2, 3, 4, 5, 6].map((i) => ( // Now 6 cards
+              <div key={i} className="shadow-md rounded-xl bg-card p-4">
                 <div className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <Skeleton className="h-5 w-28 rounded" /> {/* Metric Title */}
                   {i === 1 && <CircleDollarSign className="h-4 w-4 text-muted-foreground" />}
@@ -29,10 +30,11 @@ export default function LoanDetailLoading() {
                   {i === 3 && <Wallet className="h-4 w-4 text-muted-foreground" />}
                   {i === 4 && <ListChecks className="h-4 w-4 text-muted-foreground" />}
                   {i === 5 && <ReceiptText className="h-4 w-4 text-muted-foreground" />}
+                  {i === 6 && <Percent className="h-4 w-4 text-muted-foreground" />} {/* New card icon */}
                 </div>
                 <div>
                   <Skeleton className="h-7 w-3/4 rounded" /> {/* Metric Value */}
-                  {(i === 4 || i === 5) && <Skeleton className="h-3 w-1/2 mt-1 rounded" />} {/* Sub-text for EMIs Paid and Total Payable */}
+                  {(i === 4 || i === 5 || i === 6) && <Skeleton className="h-3 w-1/2 mt-1 rounded" />} {/* Sub-text */}
                 </div>
               </div>
             ))}
@@ -42,7 +44,7 @@ export default function LoanDetailLoading() {
 
           {/* Other Details Skeleton */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-            {[...Array(8)].map((_, i) => ( // Increased to 8 for the new "Total Projected Interest"
+            {[...Array(7)].map((_, i) => ( // 7 items for other details
               <div key={i} className="flex justify-between">
                 <Skeleton className="h-4 w-1/3 rounded" />
                 <Skeleton className="h-4 w-1/2 rounded" />
@@ -127,4 +129,3 @@ export default function LoanDetailLoading() {
     </div>
   );
 }
-

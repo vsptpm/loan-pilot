@@ -46,7 +46,7 @@ import {
   getLoanStatus,
   calculateTotalInterest
 } from '@/lib/loanUtils';
-import { Loader2, Edit3, Landmark as RecordIcon, ListChecks, Trash2, CircleDollarSign, Repeat, Wallet, Download, ReceiptText } from 'lucide-react';
+import { Loader2, Edit3, Landmark as RecordIcon, ListChecks, Trash2, CircleDollarSign, Repeat, Wallet, Download, ReceiptText, Percent } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -401,6 +401,18 @@ export default function LoanDetailPage() {
                   </p>
                 </CardContent>
               </Card>
+              <Card className="shadow-md rounded-xl">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Projected Interest</CardTitle>
+                  <Percent className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold leading-tight">{formatCurrency(totalProjectedInterest)}</div>
+                   <p className="text-xs text-muted-foreground">
+                    Total interest over loan lifetime
+                  </p>
+                </CardContent>
+              </Card>
             </div>
 
             <Separator />
@@ -419,8 +431,8 @@ export default function LoanDetailPage() {
                   <span className="font-medium">{formatCurrency(loan.amountAlreadyPaid)}</span>
                 </div>
                  <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Projected Interest:</span>
-                  <span className="font-medium">{formatCurrency(totalProjectedInterest)}</span>
+                  <span className="text-muted-foreground">Total Actual Interest Paid (to date):</span>
+                  <span className="font-medium">{formatCurrency(loanStatus.totalInterestPaid)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Loan Start Date:</span>
@@ -430,10 +442,7 @@ export default function LoanDetailPage() {
                   <span className="text-muted-foreground">Total Principal Paid (to date):</span>
                   <span className="font-medium">{formatCurrency(loanStatus.totalPrincipalPaid)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Interest Paid (to date):</span>
-                  <span className="font-medium">{formatCurrency(loanStatus.totalInterestPaid)}</span>
-                </div>
+                
                 <div className="flex justify-between">
                     <span className="text-muted-foreground">Next Scheduled Payment:</span>
                     <span className="font-medium">{loanStatus.nextDueDate ? formatDate(loanStatus.nextDueDate) : (loanStatus.currentBalance <= 0.01 ? 'Paid Off' : 'N/A')}</span>
@@ -570,9 +579,3 @@ export default function LoanDetailPage() {
     </div>
   );
 }
-
-
-    
-
-    
-
