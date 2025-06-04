@@ -273,7 +273,6 @@ export default function AppLayout({
             </SidebarMenu>
           </SidebarGroup>
           <SidebarGroup className="mt-auto">
-            {/* Removed "General" heading */}
             <SidebarMenu>
               {generalItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
@@ -291,12 +290,6 @@ export default function AppLayout({
                   </Link>
                 </SidebarMenuItem>
               ))}
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={signOut} tooltip={{ children: 'Logout', side: 'right', align: 'center' }}>
-                  <LogOut />
-                  <span>Logout</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
@@ -361,7 +354,7 @@ export default function AppLayout({
                 <PopoverTrigger asChild>
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                     <Avatar className="h-9 w-9">
-                      <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} data-ai-hint="profile person" />
+                      <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} />
                       <AvatarFallback>{getInitials(user?.displayName || user?.email)}</AvatarFallback>
                     </Avatar>
                      <span className="sr-only">Open user menu</span>
@@ -370,7 +363,7 @@ export default function AppLayout({
                 <PopoverContent className="w-auto p-4" align="end">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} data-ai-hint="profile person" />
+                      <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} />
                       <AvatarFallback className="text-xl bg-muted">{getInitials(user?.displayName || user?.email)}</AvatarFallback>
                     </Avatar>
                     <div className="space-y-1">
