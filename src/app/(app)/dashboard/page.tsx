@@ -4,7 +4,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2, Flame, ShieldCheck, CalendarCheck, Wallet, ReceiptText } from 'lucide-react';
+import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2, Flame, ShieldCheck, CalendarCheck, Wallet, ReceiptText, History } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -282,6 +282,9 @@ export default function DashboardPage() {
            <div className="text-sm mt-2 space-y-1 text-center">
               <p><span className="text-muted-foreground">Total Loans: </span><span className="font-semibold">{loanSummaries.length}</span></p>
               <p><span className="text-muted-foreground">Active Loans: </span><span className="font-semibold">{activeLoanCount}</span></p>
+              {user?.metadata?.creationTime && (
+                <p><span className="text-muted-foreground">Joined: </span><span className="font-semibold">{formatDate(user.metadata.creationTime)}</span></p>
+              )}
            </div>
         </Card>
 

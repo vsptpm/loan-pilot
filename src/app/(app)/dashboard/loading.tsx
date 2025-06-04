@@ -1,6 +1,6 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Flame, ShieldCheck, CalendarCheck, Wallet, ReceiptText } from 'lucide-react';
+import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Flame, ShieldCheck, CalendarCheck, Wallet, ReceiptText, History } from 'lucide-react';
 
 export default function DashboardLoading() {
   return (
@@ -20,9 +20,10 @@ export default function DashboardLoading() {
           <Skeleton className="h-6 w-32 mb-1 rounded" />
           <Skeleton className="h-4 w-40 mb-2 rounded" />
           <Skeleton className="h-px w-3/4 my-2 rounded-full" />
-          <div className="space-y-1 w-1/2 mx-auto mt-1">
+          <div className="space-y-1 w-3/4 mx-auto mt-1"> {/* Adjusted width */}
             <Skeleton className="h-4 w-full rounded" />
             <Skeleton className="h-4 w-full rounded" />
+            <Skeleton className="h-4 w-full rounded" /> {/* Skeleton for Joined Date */}
           </div>
         </div>
 
