@@ -26,15 +26,15 @@ export default function EditLoanPage() {
 
   useEffect(() => {
     if (!user || !loanId) {
-      setIsFetching(false);
-      if (!user && loanId) { // if user is not yet loaded but we have an ID, wait for user.
-         setIsFetching(true); // Keep fetching true if user might still load.
-      }
+      // If user or loanId is not available, we cannot fetch.
+      // isFetching should be set to false if we determine fetching is not possible.
+      // If user is still loading, the AuthProvider's loading state handles global loading.
+      setIsFetching(false); 
       return;
     }
 
     const fetchLoan = async () => {
-      setIsFetching(true);
+      setIsFetching(true); // Indicate fetching has started
       try {
         const loanDocRef = doc(db, `users/${user.uid}/loans`, loanId);
         const loanDocSnap = await getDoc(loanDocRef);
@@ -71,7 +71,7 @@ export default function EditLoanPage() {
         toast({ title: 'Error', description: 'Could not fetch loan details.', variant: 'destructive' });
         router.push('/loans');
       } finally {
-        setIsFetching(false);
+        setIsFetching(false); // Indicate fetching has completed (successfully or not)
       }
     };
 
@@ -91,8 +91,6 @@ export default function EditLoanPage() {
         updatedAt: serverTimestamp(),
       };
       
-      // Explicitly remove userId and createdAt if they somehow get into processedData
-      // Though processLoanFormData should already return the correct structure.
       delete (loanUpdatePayload as any).userId;
       delete (loanUpdatePayload as any).createdAt;
 
@@ -119,8 +117,6 @@ export default function EditLoanPage() {
   }
 
   if (!initialLoanData && !isFetching) {
-    // This state implies fetching finished but no data was set (e.g., loan not found and redirected)
-    // Or if user became null during fetching.
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
         <p className="text-lg text-muted-foreground">Unable to load loan data. You may have been redirected.</p>
@@ -128,7 +124,6 @@ export default function EditLoanPage() {
     );
   }
   
-  // Render form only if initialLoanData is available
   return (
     initialLoanData && (
       <div className="max-w-2xl mx-auto">

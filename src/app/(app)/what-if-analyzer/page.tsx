@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import type { Loan, AmortizationEntry, RecordedPrepayment, LoanStatus, WhatIfAnalysisResults } from '@/types';
 import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, doc, getDoc, orderBy } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, getDoc, orderBy, Unsubscribe } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import {
   generateAmortizationSchedule,
@@ -24,7 +24,7 @@ import { Loader2, Lightbulb, TrendingDown, TrendingUp, AlertCircle, CalendarDays
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { parseISO, differenceInMonths } from 'date-fns';
+import { parseISO, differenceInMonths, isEqual } from 'date-fns';
 
 
 export default function WhatIfAnalyzerPage() {
@@ -72,6 +72,7 @@ export default function WhatIfAnalyzerPage() {
       setRecordedPrepayments([]);
       setAnalysisResults(null);
       setNewEmiAmountInput('');
+      setIsLoadingSelectedLoanData(false);
       return;
     }
 
@@ -79,7 +80,9 @@ export default function WhatIfAnalyzerPage() {
     setAnalysisResults(null);
     setNewEmiAmountInput('');
 
-    const fetchLoanData = async () => {
+    let unsubscribeFromSnapshots: Unsubscribe | null = null;
+
+    const fetchLoanAndPrepayments = async () => {
       try {
         const loanDocRef = doc(db, `users/${user.uid}/loans`, selectedLoanId);
         const loanSnap = await getDoc(loanDocRef);
@@ -88,16 +91,14 @@ export default function WhatIfAnalyzerPage() {
         } else {
           toast({ title: "Error", description: "Selected loan not found.", variant: "destructive" });
           setSelectedLoan(null);
+          setIsLoadingSelectedLoanData(false);
+          return;
         }
-      } catch (e) {
-        toast({ title: "Error", description: "Failed to fetch loan details.", variant: "destructive" });
-        setSelectedLoan(null);
-      }
 
-      try {
         const prepaymentsCol = collection(db, `users/${user.uid}/loans/${selectedLoanId}/prepayments`);
         const qPrepayments = query(prepaymentsCol, orderBy('date', 'desc'));
-        const unsubPrepayments = onSnapshot(qPrepayments, (snapshot) => {
+        
+        unsubscribeFromSnapshots = onSnapshot(qPrepayments, (snapshot) => {
           const prepayments = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as RecordedPrepayment));
           setRecordedPrepayments(prepayments);
           setIsLoadingSelectedLoanData(false); 
@@ -107,21 +108,21 @@ export default function WhatIfAnalyzerPage() {
             setRecordedPrepayments([]);
             setIsLoadingSelectedLoanData(false);
         });
-        return unsubPrepayments;
       } catch (e) {
          toast({ title: "Error", description: "Failed to initiate prepayment fetching.", variant: "destructive" });
+         setSelectedLoan(null);
          setRecordedPrepayments([]);
          setIsLoadingSelectedLoanData(false);
       }
     };
     
-    const unsubscribePrepayments = fetchLoanData();
+    fetchLoanAndPrepayments();
     
     return () => {
-        if (unsubscribePrepayments && typeof unsubscribePrepayments === 'function') {
-            unsubscribePrepayments();
+        if (unsubscribeFromSnapshots) {
+            unsubscribeFromSnapshots();
         }
-    }
+    };
   }, [user, selectedLoanId, toast]);
 
   const initialPaidEMIsCountForSelectedLoan = useMemo(() => {
@@ -169,7 +170,6 @@ export default function WhatIfAnalyzerPage() {
     
     if (newEmi <= originalMonthlyEMIForSelectedLoan && currentLoanStatusForDisplay.currentBalance > 0) {
         toast({ title: "Info", description: "New EMI should ideally be greater than the current EMI to see payoff acceleration.", variant: "default" });
-        // Allow proceeding if user wants to see this, but it might not be beneficial.
     }
      if (currentLoanStatusForDisplay.currentBalance <= 0){
         toast({ title: "Loan Paid Off", description: "This loan is already paid off. No 'what-if' analysis needed.", variant: "default" });
@@ -178,7 +178,6 @@ export default function WhatIfAnalyzerPage() {
 
     setIsAnalyzing(true);
 
-    // Use the current outstanding balance and the next due date from the *current* status
     const analysisStartDate = currentLoanStatusForDisplay.nextDueDate;
     const analysisStartBalance = currentLoanStatusForDisplay.currentBalance;
 
@@ -198,14 +197,10 @@ export default function WhatIfAnalyzerPage() {
 
     const originalTotalInterestFromSchedule = calculateTotalInterest(currentAmortizationScheduleForSelectedLoan);
     
-    // Calculate interest already paid up to the point of change
     let interestPaidBeforeChange = 0;
     for (const entry of currentAmortizationScheduleForSelectedLoan) {
-        if (entry.isPaid && parseISO(entry.paymentDate) < parseISO(analysisStartDate)) {
+        if (parseISO(entry.paymentDate) < parseISO(analysisStartDate) && entry.isPaid) { // Consider only EMIs strictly before the change point that were paid
             interestPaidBeforeChange += entry.interestPaid;
-        } else if (entry.isPaid && isEqual(parseISO(entry.paymentDate), parseISO(analysisStartDate))) {
-            // If the change happens on a payment date, include that payment's interest
-             interestPaidBeforeChange += entry.interestPaid;
         }
     }
     
@@ -228,7 +223,7 @@ export default function WhatIfAnalyzerPage() {
       newTotalInterestPaid: newTotalLoanInterest,
       newSchedule: simulation.newSchedule,
       totalInterestSaved: interestSaved,
-      timeSavedInMonths: timeSavedInMonths,
+      timeSavedInMonths: timeSavedInMonths > 0 ? timeSavedInMonths : 0, // Ensure non-negative
     });
 
     setIsAnalyzing(false);
@@ -275,7 +270,7 @@ export default function WhatIfAnalyzerPage() {
         </CardContent>
       </Card>
 
-      {isLoadingSelectedLoanData && (
+      {isLoadingSelectedLoanData && selectedLoanId && (
         <div className="flex items-center justify-center py-6">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="ml-3 text-muted-foreground">Loading selected loan data...</p>

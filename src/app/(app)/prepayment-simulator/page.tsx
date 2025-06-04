@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import type { Loan, AmortizationEntry, RecordedPrepayment, SimulationResults } from '@/types';
 import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, doc, getDoc, orderBy } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, getDoc, orderBy, Unsubscribe } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import {
   generateAmortizationSchedule as generateCurrentRepaymentSchedule, // Renamed for clarity
@@ -95,37 +95,39 @@ export default function PrepaymentSimulatorPage() {
     if (!user || !selectedLoanId) {
       setSelectedLoan(null);
       setRecordedPrepayments([]);
-      setSimulationResults(null); 
-      setPrepaymentAfterMonth(''); 
+      setSimulationResults(null);
+      setPrepaymentAfterMonth('');
+      setIsLoadingSelectedLoanData(false); // Ensure loading is false if no selection
       return;
     }
 
     setIsLoadingSelectedLoanData(true);
-    setSimulationResults(null); 
-    setPrepaymentAfterMonth(''); 
+    setSimulationResults(null);
+    setPrepaymentAfterMonth('');
 
+    let unsubscribeFromSnapshots: Unsubscribe | null = null;
 
-    const fetchLoanData = async () => {
+    const fetchLoanAndPrepayments = async () => {
       try {
         const loanDocRef = doc(db, `users/${user.uid}/loans`, selectedLoanId);
         const loanSnap = await getDoc(loanDocRef);
+
         if (loanSnap.exists()) {
           setSelectedLoan({ id: loanSnap.id, ...loanSnap.data() } as Loan);
         } else {
           toast({ title: "Error", description: "Selected loan not found.", variant: "destructive" });
           setSelectedLoan(null);
+          setIsLoadingSelectedLoanData(false);
+          return; 
         }
-      } catch (e) {
-        toast({ title: "Error", description: "Failed to fetch loan details.", variant: "destructive" });
-        setSelectedLoan(null);
-      }
 
-      try {
         const prepaymentsCol = collection(db, `users/${user.uid}/loans/${selectedLoanId}/prepayments`);
         const qPrepayments = query(prepaymentsCol, orderBy('date', 'desc'));
-        const unsubPrepayments = onSnapshot(qPrepayments, (snapshot) => {
+        
+        unsubscribeFromSnapshots = onSnapshot(qPrepayments, (snapshot) => {
           const prepayments = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as RecordedPrepayment));
           setRecordedPrepayments(prepayments);
+          // Only set loading to false after prepayments are also loaded (or attempted)
           setIsLoadingSelectedLoanData(false); 
         }, (error) => {
             console.error("Error fetching prepayments for selected loan: ", error);
@@ -133,22 +135,22 @@ export default function PrepaymentSimulatorPage() {
             setRecordedPrepayments([]);
             setIsLoadingSelectedLoanData(false);
         });
-        return unsubPrepayments; 
+
       } catch (e) {
-         toast({ title: "Error", description: "Failed to initiate prepayment fetching.", variant: "destructive" });
+         toast({ title: "Error", description: "Failed to fetch loan data.", variant: "destructive" });
+         setSelectedLoan(null);
          setRecordedPrepayments([]);
          setIsLoadingSelectedLoanData(false);
       }
     };
     
-    const unsubscribePrepayments = fetchLoanData();
+    fetchLoanAndPrepayments();
     
-    return () => {
-        if (unsubscribePrepayments && typeof unsubscribePrepayments === 'function') {
-            unsubscribePrepayments();
+    return () => { 
+        if (unsubscribeFromSnapshots) {
+            unsubscribeFromSnapshots();
         }
-    }
-
+    };
   }, [user, selectedLoanId, toast]);
 
 
@@ -188,7 +190,6 @@ export default function PrepaymentSimulatorPage() {
     ];
     if (currentAmortizationScheduleForSelectedLoan && currentAmortizationScheduleForSelectedLoan.length > 0) { 
       currentAmortizationScheduleForSelectedLoan.forEach(entry => {
-        // Only include options for months that are not yet fully paid off or are the next due.
         if (!entry.isPaid || entry.remainingBalance > 0.01) {
             try {
               if(entry.paymentDate && typeof entry.paymentDate === 'string'){
@@ -230,7 +231,7 @@ export default function PrepaymentSimulatorPage() {
       toast({ title: "Invalid Input", description: "Please select when the prepayment should occur.", variant: "destructive" });
       return;
     }
-    const applyAfterMonth = parseInt(prepaymentAfterMonth, 10);
+    const applyAfterMonthNum = parseInt(prepaymentAfterMonth, 10);
 
     let prepaymentAmountValue: number;
     if (prepaymentInputType === 'percentage') {
@@ -240,10 +241,10 @@ export default function PrepaymentSimulatorPage() {
         return;
       }
       let balanceForPercentageCalc: number;
-      if (applyAfterMonth === 0) {
+      if (applyAfterMonthNum === 0) {
         balanceForPercentageCalc = currentAmortizationScheduleForSelectedLoan.length > 0 ? currentAmortizationScheduleForSelectedLoan[0].remainingBalance + currentAmortizationScheduleForSelectedLoan[0].principalPaid : selectedLoan.principalAmount;
       } else {
-        const entry = currentAmortizationScheduleForSelectedLoan[applyAfterMonth - 1];
+        const entry = currentAmortizationScheduleForSelectedLoan[applyAfterMonthNum - 1];
         balanceForPercentageCalc = entry ? entry.remainingBalance : 0;
       }
       prepaymentAmountValue = parseFloat(((parsedPercentage / 100) * balanceForPercentageCalc).toFixed(2));
@@ -262,7 +263,7 @@ export default function PrepaymentSimulatorPage() {
         return;
     }
     
-    if (isNaN(applyAfterMonth) || applyAfterMonth < 0 || (applyAfterMonth > 0 && applyAfterMonth > currentAmortizationScheduleForSelectedLoan.length)) {
+    if (isNaN(applyAfterMonthNum) || applyAfterMonthNum < 0 || (applyAfterMonthNum > 0 && applyAfterMonthNum > currentAmortizationScheduleForSelectedLoan.length)) {
         toast({ title: "Invalid Input", description: `Selected prepayment timing is invalid. Max month: ${currentAmortizationScheduleForSelectedLoan.length}.`, variant: "destructive" });
         return;
     }
@@ -272,7 +273,7 @@ export default function PrepaymentSimulatorPage() {
     const simulationParams = {
       type: simulationMode,
       amount: prepaymentAmountValue,
-      applyAfterMonth: applyAfterMonth,
+      applyAfterMonth: applyAfterMonthNum,
       recurringFrequencyMonths: simulationMode === 'recurring' ? parseInt(recurringFrequency, 10) : undefined,
     };
     
@@ -291,9 +292,9 @@ export default function PrepaymentSimulatorPage() {
 
     setSimulationResults({
       newClosureDate,
-      interestSaved: interestSaved < 0 ? 0 : interestSaved, // Interest saved cannot be negative
+      interestSaved: interestSaved < 0 ? 0 : interestSaved, 
       originalTotalInterest,
-      newTotalInterest: newTotalInterest < 0 ? originalTotalInterest : newTotalInterest, // If newTotalInterest is negative (error), show original
+      newTotalInterest: newTotalInterest < 0 ? originalTotalInterest : newTotalInterest, 
       simulatedSchedule,
       oldClosureDate,
     });
@@ -340,7 +341,7 @@ export default function PrepaymentSimulatorPage() {
         </CardContent>
       </Card>
 
-      {isLoadingSelectedLoanData && (
+      {isLoadingSelectedLoanData && selectedLoanId && (
         <div className="flex items-center justify-center py-6">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="ml-3 text-muted-foreground">Loading selected loan data...</p>
@@ -473,7 +474,7 @@ export default function PrepaymentSimulatorPage() {
                             {prepaymentMonthOptions.map((option) => (
                               <CommandItem
                                 key={option.value}
-                                value={option.label} // Ensure this value is unique and useful for search
+                                value={option.label} 
                                 onSelect={() => {
                                   setPrepaymentAfterMonth(option.value);
                                   setOpenMonthSelector(false);
@@ -560,7 +561,7 @@ export default function PrepaymentSimulatorPage() {
           </Card>
         </>
       )}
-      {!selectedLoan && !isLoadingLoans && !isLoadingSelectedLoanData && allLoans.length > 0 &&(
+      {!selectedLoanId && !isLoadingLoans && !isLoadingSelectedLoanData && allLoans.length > 0 &&(
          <Card className="shadow-lg">
             <CardContent className="pt-6">
                 <p className="text-muted-foreground text-center">Please select a loan above to start simulating prepayments.</p>
