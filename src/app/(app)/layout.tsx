@@ -29,7 +29,8 @@ import {
   Landmark,
   Calculator, 
   NotebookPen,
-  Lightbulb, // Added Lightbulb icon
+  Lightbulb,
+  Balance, // Added Balance icon
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -45,6 +46,7 @@ const menuItems = [
   { href: '/prepayment-simulator', label: 'Prepayment Simulator', icon: Calculator },
   { href: '/emi-calculator', label: 'EMI Calculator', icon: NotebookPen },
   { href: '/what-if-analyzer', label: 'What-if Analyzer', icon: Lightbulb },
+  { href: '/loan-comparison', label: 'Loan Comparison', icon: Balance },
 ];
 
 const generalItems = [
@@ -247,7 +249,7 @@ export default function AppLayout({
                   <Link href={item.href} legacyBehavior passHref>
                     <SidebarMenuButton
                       asChild
-                      isActive={pathname === item.href || (item.href === "/loans" && pathname.startsWith("/loans")) || (item.href === "/prepayment-simulator" && pathname === "/prepayment-simulator") || (item.href === "/emi-calculator" && pathname === "/emi-calculator") || (item.href === "/what-if-analyzer" && pathname === "/what-if-analyzer")}
+                      isActive={pathname === item.href || (item.href === "/loans" && pathname.startsWith("/loans")) || (item.href === "/prepayment-simulator" && pathname === "/prepayment-simulator") || (item.href === "/emi-calculator" && pathname === "/emi-calculator") || (item.href === "/what-if-analyzer" && pathname === "/what-if-analyzer") || (item.href === "/loan-comparison" && pathname === "/loan-comparison")}
                       tooltip={{ children: item.label, side: 'right', align: 'center' }}
                     >
                       <a>
