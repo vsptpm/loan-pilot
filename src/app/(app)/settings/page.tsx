@@ -10,16 +10,31 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, UserCircle, LockKeyhole, Eye, EyeOff, Save } from 'lucide-react';
+import { Loader2, UserCircle, LockKeyhole, Eye, EyeOff, Save, UploadCloud } from 'lucide-react';
 import { updateProfile, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, storage } from '@/lib/firebase'; // Import storage
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
 
 const profileFormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }).max(50, { message: 'Full name is too long.' }),
-  photoURL: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
+  newProfileImage: z
+    .instanceof(File)
+    .optional()
+    .nullable()
+    .refine(
+      (file) => !file || file.size <= MAX_FILE_SIZE,
+      `Max image size is 2MB.`
+    )
+    .refine(
+      (file) => !file || ACCEPTED_IMAGE_TYPES.includes(file.type),
+      "Only .jpg, .jpeg, .png and .gif formats are accepted."
+    ),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -44,12 +59,15 @@ export default function SettingsPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       fullName: '',
-      photoURL: '',
+      newProfileImage: null,
     },
   });
 
@@ -66,10 +84,21 @@ export default function SettingsPage() {
     if (user) {
       profileForm.reset({
         fullName: user.displayName || '',
-        photoURL: user.photoURL || '',
+        newProfileImage: null, // Reset file input
       });
+      setImagePreview(user.photoURL); // Set initial preview to current user photo
     }
   }, [user, profileForm]);
+  
+  // Cleanup object URL
+  useEffect(() => {
+    return () => {
+      if (imagePreview && imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
 
   const handleProfileUpdate = async (values: ProfileFormValues) => {
     if (!user) {
@@ -77,17 +106,56 @@ export default function SettingsPage() {
       return;
     }
     setIsProfileUpdating(true);
+    setUploadProgress(null);
+
+    let finalPhotoURL = user.photoURL; // Keep current photoURL by default
+
     try {
+      if (values.newProfileImage) {
+        const file = values.newProfileImage;
+        const storageRef = ref(storage, `profileImages/${user.uid}/${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        await new Promise<void>((resolve, reject) => {
+          uploadTask.on('state_changed',
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              setUploadProgress(progress);
+            },
+            (error) => {
+              console.error("Upload failed:", error);
+              toast({ title: 'Image Upload Failed', description: error.message, variant: 'destructive' });
+              reject(error);
+            },
+            async () => {
+              finalPhotoURL = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve();
+            }
+          );
+        });
+      }
+
       await updateProfile(user, {
         displayName: values.fullName,
-        photoURL: values.photoURL,
+        photoURL: finalPhotoURL,
       });
       toast({ title: 'Success', description: 'Profile updated successfully!' });
-      // Re-fetch user or trigger context update if needed, though Firebase often updates live
+      // AuthProvider should pick up the changes via onAuthStateChanged
+      // and update the user object in context, triggering navbar update.
+      profileForm.reset({ fullName: values.fullName, newProfileImage: null }); // Reset form, clear file input
+      if (finalPhotoURL && finalPhotoURL !== imagePreview && !finalPhotoURL.startsWith('blob:')) {
+        setImagePreview(finalPhotoURL); // Update preview to the new persistent URL
+      }
+
+
     } catch (error: any) {
-      toast({ title: 'Error updating profile', description: error.message, variant: 'destructive' });
+      // Error is already toasted by uploadTask error handler or if updateProfile itself fails.
+      if (!values.newProfileImage) { // only toast if it's not an upload error which is handled above
+         toast({ title: 'Error updating profile', description: error.message, variant: 'destructive' });
+      }
     } finally {
       setIsProfileUpdating(false);
+      setUploadProgress(null);
     }
   };
 
@@ -119,13 +187,13 @@ export default function SettingsPage() {
   };
 
   const getInitials = (name?: string | null) => {
-    if (!name) return user?.email?.substring(0, 2).toUpperCase() || 'U';
+    if (!name && !user?.email) return 'U';
+    if (!name) return user!.email!.substring(0, 2).toUpperCase();
     const names = name.split(' ');
     if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
     return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
   };
   
-  const currentPhotoURL = profileForm.watch('photoURL');
 
   if (authLoading) {
     return (
@@ -146,18 +214,18 @@ export default function SettingsPage() {
             <UserCircle className="h-6 w-6 text-primary" />
             <CardTitle className="text-xl font-headline">Profile Information</CardTitle>
           </div>
-          <CardDescription>Update your display name and profile picture URL.</CardDescription>
+          <CardDescription>Update your display name and profile picture.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center space-x-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={currentPhotoURL || user?.photoURL || undefined} alt={profileForm.getValues('fullName') || user?.displayName || "User"} data-ai-hint="profile person" />
+              <AvatarImage src={imagePreview || undefined} alt={profileForm.getValues('fullName') || user?.displayName || "User"} data-ai-hint="profile person"/>
               <AvatarFallback className="text-2xl bg-muted">
                 {getInitials(profileForm.getValues('fullName') || user?.displayName)}
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="text-lg font-semibold">{profileForm.getValues('fullName') || user?.displayName || 'User Name'}</p>
+              <p className="text-lg font-semibold">{profileForm.watch('fullName') || user?.displayName || 'User Name'}</p>
               <p className="text-sm text-muted-foreground">{user?.email}</p>
             </div>
           </div>
@@ -179,17 +247,50 @@ export default function SettingsPage() {
               />
               <FormField
                 control={profileForm.control}
-                name="photoURL"
-                render={({ field }) => (
+                name="newProfileImage"
+                render={({ field: { onChange, value, ...restField } }) => (
                   <FormItem>
-                    <FormLabel>Photo URL</FormLabel>
+                    <FormLabel>New Profile Picture</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://example.com/your-image.png" {...field} />
+                      <Input 
+                        type="file" 
+                        accept="image/png, image/jpeg, image/gif"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          onChange(file || null);
+                          if (file) {
+                            if (imagePreview && imagePreview.startsWith('blob:')) {
+                                URL.revokeObjectURL(imagePreview); 
+                            }
+                            setImagePreview(URL.createObjectURL(file));
+                          } else if (!user?.photoURL) { // if no file selected and no existing user photo, clear preview
+                            if (imagePreview && imagePreview.startsWith('blob:')) {
+                                URL.revokeObjectURL(imagePreview); 
+                            }
+                            setImagePreview(null);
+                          } else { // if no file selected but there is an existing photo, revert preview to it
+                             if (imagePreview && imagePreview.startsWith('blob:')) {
+                                URL.revokeObjectURL(imagePreview); 
+                            }
+                            setImagePreview(user.photoURL);
+                          }
+                        }}
+                        {...restField}
+                      />
                     </FormControl>
+                    <FormDescription>Optional. Max 2MB. JPG, PNG, GIF.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+               {uploadProgress !== null && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Upload Progress: {Math.round(uploadProgress)}%</Label>
+                  <div className="w-full bg-muted rounded-full h-1.5">
+                    <div className="bg-primary h-1.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>
+                  </div>
+                </div>
+              )}
               <Button type="submit" disabled={isProfileUpdating}>
                 {isProfileUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Save Profile
@@ -298,3 +399,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+

@@ -18,10 +18,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        // Set Inter as the default sans-serif font using the CSS variable
-        sans: ['var(--font-inter)', ...defaultTheme.fontFamily.sans],
-        // headline and body fonts removed, will inherit from sans (Inter)
-        code: ['monospace', 'monospace'], // Keep code font as is
+        sans: ['var(--font-alegreya)', ...defaultTheme.fontFamily.serif], // Body font
+        headline: ['var(--font-belleza)', ...defaultTheme.fontFamily.sans], // Headline font
+        code: ['monospace', 'monospace'], 
       },
       colors: {
         background: 'hsl(var(--background))',
