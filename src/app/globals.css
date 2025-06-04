@@ -5,80 +5,79 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 240 5% 96%;
     --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --primary: 140 50% 40%; /* Donezo Green */
+    --primary-foreground: 0 0% 100%; /* White text on green */
+    --secondary: 240 4.8% 93%; /* Light gray for secondary elements, outlined buttons */
+    --secondary-foreground: 240 5.9% 10%; /* Dark text on secondary */
+    --muted: 240 4.8% 95.9%; /* Even lighter gray for muted backgrounds */
+    --muted-foreground: 240 3.8% 46.1%; /* Grayer text */
+    --accent: 140 50% 92%; /* Very light green for hover states on primary actions */
+    --accent-foreground: 140 50% 30%; /* Darker green text on light green accent */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.5rem;
+    --border: 240 5.9% 88%; /* Light gray border, slightly darker for inputs */
+    --input: 240 4.8% 94%; /* Light gray input background */
+    --ring: 140 50% 45%; /* Primary green for focus rings */
 
     /* Sidebar Specific Colors - Light Theme */
-    --sidebar-background: 240 5% 96%;
-    --sidebar-foreground: 240 10% 3.9%;
-    --sidebar-primary: 120 60% 45%; /* Green for sidebar */
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 120 60% 90%;
-    --sidebar-accent-foreground: 120 60% 30%;
-    --sidebar-border: 240 5% 85%;
-    --sidebar-ring: 120 60% 45%;
+    --sidebar-background: 0 0% 100%; /* White sidebar background */
+    --sidebar-foreground: 240 10% 3.9%; /* Dark text */
+    --sidebar-primary: 140 50% 40%; /* Donezo Green for active items */
+    --sidebar-primary-foreground: 0 0% 100%; /* White text on active green */
+    --sidebar-accent: 140 50% 94%; /* Very light green for hover on sidebar items */
+    --sidebar-accent-foreground: 140 50% 30%; /* Darker green text on light green hover */
+    --sidebar-border: 240 5.9% 90%; /* Standard light gray border */
+    --sidebar-ring: 140 50% 45%;
     
-    --chart-1: 120 60% 45%; /* Green for charts */
-    --chart-2: 120 40% 55%;
-    --chart-3: 120 50% 65%;
-    --chart-4: 120 70% 35%;
-    --chart-5: 120 55% 50%;
+    --chart-1: 140 50% 40%; /* Green for charts */
+    --chart-2: 140 50% 50%;
+    --chart-3: 140 50% 60%;
+    --chart-4: 140 50% 30%;
+    --chart-5: 140 50% 45%;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
+    --background: 220 15% 5%; /* Very dark blue-gray for "pitchblack" feel */
+    --foreground: 0 0% 98%; /* Light text */
+    --card: 220 13% 10%; /* Slightly lighter dark gray for cards */
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
+    --popover: 220 13% 10%;
     --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
+    --primary: 140 55% 50%; /* Brighter green for dark mode */
+    --primary-foreground: 0 0% 100%; /* White text on green */
+    --secondary: 220 10% 15%; /* Dark gray for secondary elements */
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --muted: 220 10% 15%;
+    --muted-foreground: 240 5% 64.9%; /* Dimmer light gray text */
+    --accent: 140 55% 25%; /* Darker shade of primary green for hover states */
+    --accent-foreground: 140 55% 85%; /* Light green text on accent */
+    --destructive: 0 70% 50%; /* Adjusted red for dark mode */
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --border: 220 10% 20%; /* Dark gray border */
+    --input: 220 10% 12%; /* Dark input field background */
+    --ring: 140 55% 55%; /* Brighter green for focus rings */
 
     /* Sidebar Specific Colors - Dark Theme */
-    --sidebar-background: 240 8% 10%;
+    --sidebar-background: 220 13% 10%; /* Match dark card background */
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 120 55% 55%; /* Lighter green for dark mode sidebar */
+    --sidebar-primary: 140 55% 50%; /* Brighter Green for active items */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 120 40% 25%;
-    --sidebar-accent-foreground: 120 50% 80%;
-    --sidebar-border: 240 8% 15%;
-    --sidebar-ring: 120 55% 55%;
+    --sidebar-accent: 140 50% 20%; /* Darker green for hover on sidebar items */
+    --sidebar-accent-foreground: 140 50% 75%; /* Lighter green text on dark green hover */
+    --sidebar-border: 220 10% 20%;
+    --sidebar-ring: 140 55% 55%;
     
-    --chart-1: 120 55% 55%; /* Lighter green for dark mode charts */
-    --chart-2: 120 35% 65%;
-    --chart-3: 120 45% 75%;
-    --chart-4: 120 65% 45%;
-    --chart-5: 120 50% 60%;
+    --chart-1: 140 55% 50%; /* Brighter green for dark mode charts */
+    --chart-2: 140 55% 60%;
+    --chart-3: 140 55% 70%;
+    --chart-4: 140 55% 40%;
+    --chart-5: 140 55% 55%;
   }
 }
 
@@ -89,5 +88,4 @@
   body {
     @apply bg-background text-foreground; /* Default font will be applied via layout.tsx */
   }
-  /* Remove specific h1-h6 font-headline application if not using custom headline font */
 }
