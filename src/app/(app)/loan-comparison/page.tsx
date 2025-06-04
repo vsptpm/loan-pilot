@@ -147,7 +147,12 @@ export default function LoanComparisonPage() {
                         <FormItem className="flex-grow mr-4">
                           <FormLabel className="sr-only">Loan Offer Name {index + 1}</FormLabel>
                           <FormControl>
-                            <Input placeholder={`Loan Offer ${index + 1}`} {...nameField} className="text-lg font-semibold border-0 shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-auto py-1" />
+                            <Input 
+                              placeholder={`Loan Offer ${index + 1}`} 
+                              {...nameField} 
+                              value={nameField.value ?? ""}
+                              className="text-lg font-semibold border-0 shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-auto py-1" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -174,7 +179,12 @@ export default function LoanComparisonPage() {
                         <FormItem>
                           <FormLabel>Principal Amount (₹)</FormLabel>
                           <FormControl>
-                            <Input type="number" placeholder="e.g., 500000" {...pField} />
+                            <Input 
+                              type="number" 
+                              placeholder="e.g., 500000" 
+                              {...pField} 
+                              value={pField.value !== undefined ? String(pField.value) : ""}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -187,7 +197,13 @@ export default function LoanComparisonPage() {
                         <FormItem>
                           <FormLabel>Annual Interest Rate (%)</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" placeholder="e.g., 8.5" {...rField} />
+                            <Input 
+                              type="number" 
+                              step="0.01" 
+                              placeholder="e.g., 8.5" 
+                              {...rField} 
+                              value={rField.value !== undefined ? String(rField.value) : ""}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -201,7 +217,12 @@ export default function LoanComparisonPage() {
                           <FormItem>
                             <FormLabel>Loan Tenure</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="e.g., 5 or 60" {...tField} />
+                              <Input 
+                                type="number" 
+                                placeholder="e.g., 5 or 60" 
+                                {...tField} 
+                                value={tField.value !== undefined ? String(tField.value) : ""}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
