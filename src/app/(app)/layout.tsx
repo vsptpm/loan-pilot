@@ -52,6 +52,7 @@ import { db } from '@/lib/firebase';
 import type { Loan } from '@/types';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { useIsMobile } from '@/hooks/use-mobile'; // Added useIsMobile import
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -73,6 +74,7 @@ export default function AppLayout({
 }) {
   // All hooks are called unconditionally at the top
   const { user, loading, signOut } = useAuth();
+  const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -138,17 +140,28 @@ export default function AppLayout({
   }, [activeSuggestionIndex]);
 
   useEffect(() => {
+    const searchWasJustPerformed = justSearchedRef.current;
     if (justSearchedRef.current) {
-      justSearchedRef.current = false; 
-      return;
+      justSearchedRef.current = false;
     }
-
-    if (pathname === '/loans') {
-      setSearchTerm(searchParams.get('search') || '');
-    } else {
-      setSearchTerm('');
+  
+    if (!searchWasJustPerformed) {
+      if (pathname === '/loans') {
+        setSearchTerm(searchParams.get('search') || '');
+      } else {
+        setSearchTerm('');
+      }
     }
   }, [pathname, searchParams]);
+
+
+  useEffect(() => {
+    if (searchTerm.trim() && filteredSuggestions.length > 0 && document.activeElement === searchInputRef.current) {
+      setShowSuggestions(true);
+    } else if (!searchTerm.trim() && showSuggestions) { 
+      setShowSuggestions(false);
+    }
+  }, [searchTerm, filteredSuggestions, showSuggestions]);
 
 
   // Conditional rendering logic now happens after all hooks are called
@@ -210,14 +223,6 @@ export default function AppLayout({
     setActiveSuggestionIndex(-1);
   };
   
-  useEffect(() => {
-    if (searchTerm.trim() && filteredSuggestions.length > 0 && document.activeElement === searchInputRef.current) {
-      setShowSuggestions(true);
-    } else if (!searchTerm.trim() && showSuggestions) { 
-      setShowSuggestions(false);
-    }
-  }, [searchTerm, filteredSuggestions, showSuggestions]);
-
 
   const handleSuggestionClick = (suggestionName: string) => {
     router.push(`/loans?search=${encodeURIComponent(suggestionName)}`);
