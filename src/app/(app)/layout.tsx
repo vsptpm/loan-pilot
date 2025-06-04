@@ -21,6 +21,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   LayoutDashboard,
   Settings,
   HelpCircle,
@@ -350,40 +361,58 @@ export default function AppLayout({
             
             <div className="flex items-center gap-3 flex-shrink-0">
               <ThemeToggle />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} />
-                      <AvatarFallback>{getInitials(user?.displayName || user?.email)}</AvatarFallback>
-                    </Avatar>
-                     <span className="sr-only">Open user menu</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-4" align="end">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} />
-                      <AvatarFallback className="text-xl bg-muted">{getInitials(user?.displayName || user?.email)}</AvatarFallback>
-                    </Avatar>
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-foreground">
-                        {user?.displayName || user?.email?.split('@')[0]}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{user?.email}</p>
+              <AlertDialog>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} />
+                        <AvatarFallback>{getInitials(user?.displayName || user?.email)}</AvatarFallback>
+                      </Avatar>
+                       <span className="sr-only">Open user menu</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-4" align="end">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} />
+                        <AvatarFallback className="text-xl bg-muted">{getInitials(user?.displayName || user?.email)}</AvatarFallback>
+                      </Avatar>
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-foreground">
+                          {user?.displayName || user?.email?.split('@')[0]}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{user?.email}</p>
+                      </div>
                     </div>
-                  </div>
-                  <Separator className="my-3" />
-                  <Link href="/settings" legacyBehavior passHref>
-                     <Button variant="ghost" className="w-full justify-start text-sm h-auto py-1.5 px-2">
-                        <Settings className="mr-2 h-4 w-4" /> Account Settings
+                    <Separator className="my-3" />
+                    <Link href="/settings" legacyBehavior passHref>
+                       <Button variant="ghost" className="w-full justify-start text-sm h-auto py-1.5 px-2">
+                          <Settings className="mr-2 h-4 w-4" /> Account Settings
+                       </Button>
+                    </Link>
+                    <AlertDialogTrigger asChild>
+                     <Button variant="ghost" className="w-full justify-start text-sm text-destructive hover:text-destructive hover:bg-destructive/10 h-auto py-1.5 px-2">
+                          <LogOut className="mr-2 h-4 w-4" /> Logout
                      </Button>
-                  </Link>
-                   <Button variant="ghost" className="w-full justify-start text-sm text-destructive hover:text-destructive hover:bg-destructive/10 h-auto py-1.5 px-2" onClick={signOut}>
-                        <LogOut className="mr-2 h-4 w-4" /> Logout
-                   </Button>
-                </PopoverContent>
-              </Popover>
+                    </AlertDialogTrigger>
+                  </PopoverContent>
+                </Popover>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to log out of LoanPilot?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={signOut} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                      Logout
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         </header>
