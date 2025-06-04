@@ -11,7 +11,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod'; // Corrected import for Zod
 
 const LoanForAISchema = z.object({
   id: z.string().describe("The unique identifier of the loan."),
