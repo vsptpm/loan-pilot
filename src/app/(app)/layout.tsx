@@ -52,7 +52,6 @@ const menuItems = [
 ];
 
 const generalItems = [
-  { href: '/settings', label: 'Settings', icon: Settings },
   { href: '/help', label: 'Help', icon: HelpCircle },
 ];
 
@@ -274,7 +273,7 @@ export default function AppLayout({
             </SidebarMenu>
           </SidebarGroup>
           <SidebarGroup className="mt-auto">
-            <span className="px-3 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">General</span>
+            {/* Removed "General" heading */}
             <SidebarMenu>
               {generalItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
