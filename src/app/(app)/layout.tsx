@@ -362,7 +362,7 @@ export default function AppLayout({
                 <PopoverTrigger asChild>
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                     <Avatar className="h-9 w-9">
-                      <AvatarImage src={user?.photoURL || `https://placehold.co/40x40.png`} alt={user?.displayName || 'User'} data-ai-hint="profile person" />
+                      <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} data-ai-hint="profile person" />
                       <AvatarFallback>{getInitials(user?.displayName || user?.email)}</AvatarFallback>
                     </Avatar>
                      <span className="sr-only">Open user menu</span>
@@ -371,7 +371,7 @@ export default function AppLayout({
                 <PopoverContent className="w-auto p-4" align="end">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={user?.photoURL || `https://placehold.co/60x60.png`} alt={user?.displayName || 'User'} data-ai-hint="profile person" />
+                      <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} data-ai-hint="profile person" />
                       <AvatarFallback className="text-xl bg-muted">{getInitials(user?.displayName || user?.email)}</AvatarFallback>
                     </Avatar>
                     <div className="space-y-1">
