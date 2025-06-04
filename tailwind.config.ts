@@ -1,6 +1,6 @@
 
 import type {Config} from 'tailwindcss';
-// defaultTheme import removed as it's not used in the reverted state
+import defaultTheme from 'tailwindcss/defaultTheme';
 
 export default {
   darkMode: ['class'],
@@ -18,7 +18,10 @@ export default {
       },
     },
     extend: {
-      // fontFamily section for Alegreya and Belleza removed
+      fontFamily: {
+        sans: ['var(--font-alegreya)', ...defaultTheme.fontFamily.serif], // Body font (Alegreya - serif)
+        headline: ['var(--font-belleza)', ...defaultTheme.fontFamily.sans], // Headline font (Belleza - sans-serif)
+      },
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',

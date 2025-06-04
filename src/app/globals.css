@@ -3,87 +3,101 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Removed @layer base for Alegreya and Belleza fonts */
-
 @layer base {
   :root {
-    /* Reverted to original theme from the project's initial setup */
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    /* Light Theme - based on PRD */
+    --background: 180 13% 95%; /* Very light blue #F0F4F4 */
+    --foreground: 200 10% 25%; /* Dark grayish blue for text */
 
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 50%;
+    --card: 180 13% 98%; /* Slightly lighter than background or same */
+    --card-foreground: 200 10% 25%;
+
+    --popover: 180 13% 98%;
+    --popover-foreground: 200 10% 25%;
+
+    --primary: 181 21% 46%; /* Muted blue #5C8D8E */
+    --primary-foreground: 0 0% 100%; /* White for contrast on muted blue */
+
+    --secondary: 180 10% 85%; /* Lighter muted blue/gray */
+    --secondary-foreground: 181 21% 30%; /* Darker muted blue for text on secondary */
+
+    --muted: 180 10% 88%; /* Slightly different gray for muted states */
+    --muted-foreground: 180 7% 50%; /* Mid-gray for muted text */
+
+    --accent: 181 33% 36%; /* Deep teal #3E7879 */
+    --accent-foreground: 0 0% 100%; /* White for contrast on deep teal */
+
+    --destructive: 0 72% 51%; /* Default destructive */
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 180 10% 80%;
+    --input: 180 10% 90%;
+    --ring: 181 21% 46%; /* Primary color for ring */
 
     --radius: 0.5rem;
 
-    /* Sidebar Specific Colors - reverted to original setup */
-    --sidebar-background: 222.2 80% 5.5%; 
-    --sidebar-foreground: 210 40% 90%;    
-    --sidebar-primary: 217.2 91.2% 59.8%; 
-    --sidebar-primary-foreground: 222.2 47.4% 11.2%; 
-    --sidebar-accent: 217.2 32.6% 22.5%;  
-    --sidebar-accent-foreground: 210 40% 98%; 
-    --sidebar-border: 217.2 32.6% 15.5%; 
-    --sidebar-ring: 224.3 76.3% 48%; 
+    /* Sidebar Specific Colors - Light Theme */
+    --sidebar-background: 180 15% 92%;
+    --sidebar-foreground: 200 10% 20%;
+    --sidebar-primary: 181 21% 46%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 180 10% 85%;
+    --sidebar-accent-foreground: 181 21% 30%;
+    --sidebar-border: 180 10% 75%;
+    --sidebar-ring: 181 21% 46%;
+    
+    --chart-1: 181 21% 46%; /* Primary */
+    --chart-2: 181 33% 36%; /* Accent */
+    --chart-3: 180 15% 60%;
+    --chart-4: 180 20% 50%;
+    --chart-5: 180 25% 70%;
   }
 
   .dark {
-    /* Reverted to original dark theme from the project's initial setup */
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    /* Dark Theme - derived from PRD colors */
+    --background: 200 12% 12%; /* Dark cool gray/blue */
+    --foreground: 180 10% 88%; /* Light grayish blue text */
 
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 50%;
+    --card: 200 12% 15%;
+    --card-foreground: 180 10% 88%;
+
+    --popover: 200 12% 15%;
+    --popover-foreground: 180 10% 88%;
+
+    --primary: 181 21% 50%; /* Muted blue, slightly lighter for dark bg */
+    --primary-foreground: 0 0% 100%; /* White */
+
+    --secondary: 200 10% 25%; /* Darker secondary */
+    --secondary-foreground: 180 10% 80%;
+
+    --muted: 200 10% 22%;
+    --muted-foreground: 180 8% 60%;
+
+    --accent: 181 33% 40%; /* Deep teal, slightly lighter for dark bg */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 60% 45%; /* Darker destructive */
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 200 10% 20%;
+    --input: 200 10% 20%;
+    --ring: 181 21% 50%; /* Primary color for ring (dark) */
     
-    /* Sidebar Specific Colors - reverted to original setup */
-    --sidebar-background: 222.2 80% 5.5%;
-    --sidebar-foreground: 210 40% 90%;   
-    --sidebar-primary: 217.2 91.2% 59.8%;
-    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 217.2 32.6% 22.5%; 
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217.2 32.6% 15.5%;
-    --sidebar-ring: 224.3 76.3% 48%;
+    /* Sidebar Specific Colors - Dark Theme */
+    --sidebar-background: 200 12% 10%;
+    --sidebar-foreground: 180 10% 85%;
+    --sidebar-primary: 181 21% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 200 10% 25%;
+    --sidebar-accent-foreground: 180 10% 90%;
+    --sidebar-border: 200 10% 18%;
+    --sidebar-ring: 181 21% 50%;
+
+    --chart-1: 181 21% 50%;
+    --chart-2: 181 33% 40%;
+    --chart-3: 180 15% 70%;
+    --chart-4: 180 20% 60%;
+    --chart-5: 180 25% 80%;
   }
 }
 
@@ -92,6 +106,9 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans; /* font-sans will be Alegreya via tailwind.config */
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-headline; /* Belleza via tailwind.config */
   }
 }

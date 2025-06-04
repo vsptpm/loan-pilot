@@ -1,7 +1,7 @@
 
 import type { Metadata } from 'next';
 import './globals.css';
-// Alegreya and Belleza imports removed
+import { Alegreya, Belleza } from 'next/font/google';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from 'next-themes';
@@ -11,7 +11,20 @@ export const metadata: Metadata = {
   description: 'Manage your personal loans effectively with LoanPilot.',
 };
 
-// Belleza and Alegreya font configurations removed
+const alegreya = Alegreya({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-alegreya',
+  weight: ['400', '500', '700', '800', '900'] // Include desired weights
+});
+
+const belleza = Belleza({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-belleza',
+  weight: '400', // Belleza typically only has regular weight
+});
+
 
 export default function RootLayout({
   children,
@@ -19,12 +32,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`${alegreya.variable} ${belleza.variable}`} suppressHydrationWarning>
       <head>
-        {/* Google Fonts preconnect reverted or assuming default behavior */}
+        {/* Removed Google Fonts preconnect as next/font handles it */}
       </head>
-      {/* Font variables removed from body className */}
-      <body className={`antialiased min-h-screen bg-background text-foreground`}>
+      {/* font-sans will apply Alegreya, font-headline will apply Belleza due to tailwind.config */}
+      <body className={`antialiased min-h-screen bg-background text-foreground font-sans`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
