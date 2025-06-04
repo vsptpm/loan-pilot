@@ -18,7 +18,12 @@ export default function DashboardLoading() {
         <div className="lg:col-span-1 shadow-lg bg-card flex flex-col items-center p-6 rounded-xl">
           <Skeleton className="w-24 h-24 rounded-full mb-3" />
           <Skeleton className="h-6 w-32 mb-1 rounded" />
-          <Skeleton className="h-4 w-40 rounded" />
+          <Skeleton className="h-4 w-40 mb-2 rounded" />
+          <Skeleton className="h-px w-3/4 my-2 rounded-full" />
+          <div className="space-y-1 w-1/2 mx-auto mt-1">
+            <Skeleton className="h-4 w-full rounded" />
+            <Skeleton className="h-4 w-full rounded" />
+          </div>
         </div>
 
         {/* Stats Cards Skeleton Container */}

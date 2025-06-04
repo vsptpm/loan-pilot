@@ -4,7 +4,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2, Flame, ShieldCheck, CalendarCheck } from 'lucide-react';
+import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2, Flame, ShieldCheck, CalendarCheck, Landmark } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -110,6 +110,10 @@ export default function DashboardPage() {
       };
     });
   }, [loans]);
+
+  const activeLoanCount = useMemo(() => {
+    return loanSummaries.filter(s => s.status.currentBalance > 0.01).length;
+  }, [loanSummaries]);
 
   const dashboardStats = useMemo(() => {
     const activeLoanSummaries = loanSummaries.filter(s => s.status.currentBalance > 0.01);
@@ -266,7 +270,12 @@ export default function DashboardPage() {
             </AvatarFallback>
           </Avatar>
           <h2 className="text-xl font-semibold text-card-foreground">{user?.displayName || 'User Name'}</h2>
-          <p className="text-sm text-muted-foreground">{user?.email}</p>
+          <p className="text-sm text-muted-foreground mb-2">{user?.email}</p>
+          <Separator className="my-2 w-3/4" />
+           <div className="text-sm mt-2 space-y-1 text-center">
+              <p><span className="text-muted-foreground">Total Loans: </span><span className="font-semibold">{loanSummaries.length}</span></p>
+              <p><span className="text-muted-foreground">Active Loans: </span><span className="font-semibold">{activeLoanCount}</span></p>
+           </div>
         </Card>
 
         {/* Stats Cards Container */}
