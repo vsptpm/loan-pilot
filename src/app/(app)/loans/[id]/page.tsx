@@ -43,9 +43,10 @@ import {
   generateAmortizationSchedule as generateRepaymentSchedule,
   calculateEMI,
   getInitialPaidEMIsCount,
-  getLoanStatus
+  getLoanStatus,
+  calculateTotalInterest
 } from '@/lib/loanUtils';
-import { Loader2, Edit3, Landmark as RecordIcon, ListChecks, Trash2, CircleDollarSign, Repeat, Wallet, Download } from 'lucide-react';
+import { Loader2, Edit3, Landmark as RecordIcon, ListChecks, Trash2, CircleDollarSign, Repeat, Wallet, Download, ReceiptText } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -165,6 +166,16 @@ export default function LoanDetailPage() {
     return getLoanStatus(loan, currentAmortizationSchedule, false); 
   }, [loan, currentAmortizationSchedule]);
 
+  const totalProjectedInterest = useMemo(() => {
+    if (!currentAmortizationSchedule) return 0;
+    return calculateTotalInterest(currentAmortizationSchedule);
+  }, [currentAmortizationSchedule]);
+
+  const totalAmountPayable = useMemo(() => {
+    if (!loan) return 0;
+    return loan.principalAmount + totalProjectedInterest;
+  }, [loan, totalProjectedInterest]);
+
 
   const handleRecordPrepaymentSubmit = async (data: RecordedPrepaymentFormData) => {
     if (!user || !loanIdString || !loan) {
@@ -242,6 +253,7 @@ export default function LoanDetailPage() {
       "\nStart Date:", escapeCSV(formatDate(loan.startDate)),
       "\nTotal Prepayments Made:", escapeCSV(formatCurrency(loan.totalPrepaymentAmount || 0)),
       "\nOutstanding Balance (as of today):", escapeCSV(formatCurrency(loanStatus.currentBalance)),
+      "\nTotal Amount Payable (projected):", escapeCSV(formatCurrency(totalAmountPayable)),
       "\n" // Empty line
     ];
     
@@ -274,7 +286,7 @@ export default function LoanDetailPage() {
     } else {
       toast({ title: "Error", description: "CSV export not supported by your browser.", variant: "destructive"});
     }
-  }, [loan, currentAmortizationSchedule, loanStatus, toast]);
+  }, [loan, currentAmortizationSchedule, loanStatus, totalAmountPayable, toast]);
 
 
   if (loading || loadingPrepayments) {
@@ -337,7 +349,7 @@ export default function LoanDetailPage() {
           <CardDescription>Detailed overview of your loan, reflecting all recorded prepayments. Assumes on-time EMI payments up to today.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <Card className="shadow-md rounded-xl">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Original Principal</CardTitle>
@@ -377,6 +389,18 @@ export default function LoanDetailPage() {
                   </p>
                 </CardContent>
               </Card>
+               <Card className="shadow-md rounded-xl">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Amount Payable</CardTitle>
+                  <ReceiptText className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold leading-tight">{formatCurrency(totalAmountPayable)}</div>
+                   <p className="text-xs text-muted-foreground">
+                    (Principal + Total Projected Interest)
+                  </p>
+                </CardContent>
+              </Card>
             </div>
 
             <Separator />
@@ -393,6 +417,10 @@ export default function LoanDetailPage() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount Initially Paid (Lumpsum):</span>
                   <span className="font-medium">{formatCurrency(loan.amountAlreadyPaid)}</span>
+                </div>
+                 <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Projected Interest:</span>
+                  <span className="font-medium">{formatCurrency(totalProjectedInterest)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Loan Start Date:</span>
