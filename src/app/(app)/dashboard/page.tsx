@@ -4,14 +4,13 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2 } from 'lucide-react';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -30,8 +29,6 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { FinancialPlanningIllustration } from '@/components/illustrations/FinancialPlanningIllustration';
 import { parseISO } from 'date-fns';
-import { getPrepaymentAdvice, type PrepaymentAdviceInput, type PrepaymentAdviceOutput } from '@/ai/flows/prepayment-advice-flow';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 interface DashboardLoanSummary {
@@ -52,10 +49,6 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  const [aiAdvice, setAiAdvice] = useState<PrepaymentAdviceOutput | null>(null);
-  const [isFetchingAdvice, setIsFetchingAdvice] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -166,43 +159,6 @@ export default function DashboardPage() {
     return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
   };
 
-  const handleGetAiAdvice = async () => {
-    setIsFetchingAdvice(true);
-    setAiAdvice(null);
-    setAiError(null);
-
-    const activeLoanSummaries = loanSummaries.filter(s => s.currentPrincipal > 0.01);
-
-    if (activeLoanSummaries.length === 0) {
-      setAiError("No active loans available to analyze for prepayment advice. Add a loan or ensure existing loans have a balance greater than zero.");
-      setIsFetchingAdvice(false);
-      // Optionally, display a toast
-      toast({ title: "No Active Loans", description: "AI advice requires active loans with outstanding balances.", variant: "default" });
-      return;
-    }
-
-    const adviceInput: PrepaymentAdviceInput = {
-      loans: activeLoanSummaries.map(s => ({
-        id: s.id,
-        name: s.name,
-        currentBalance: s.currentPrincipal,
-        interestRate: s.interestRate,
-      })),
-    };
-
-    try {
-      const result = await getPrepaymentAdvice(adviceInput);
-      setAiAdvice(result);
-    } catch (error) {
-      console.error("Error fetching AI prepayment advice:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to get AI advice. Please try again.";
-      setAiError(errorMessage);
-      toast({ title: "AI Advice Error", description: errorMessage, variant: "destructive" });
-    } finally {
-      setIsFetchingAdvice(false);
-    }
-  };
-
 
   if (isLoading) {
     return (
@@ -300,59 +256,6 @@ export default function DashboardPage() {
           </Card>
         </div>
       </div>
-
-      {/* AI Prepayment Advisor Card */}
-      <Card className="shadow-lg rounded-xl">
-        <CardHeader>
-          <CardTitle className="text-xl font-headline flex items-center">
-            <Sparkles className="mr-2 h-5 w-5 text-primary" /> AI Prepayment Advisor
-          </CardTitle>
-          <CardDescription>Get AI-powered suggestions on which loan to prioritize for prepayment to save the most interest.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isFetchingAdvice && (
-            <div className="flex items-center space-x-2 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span>Generating advice... Please wait.</span>
-            </div>
-          )}
-          {aiError && !isFetchingAdvice && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Advisor Error</AlertTitle>
-              <AlertDescription>{aiError}</AlertDescription>
-            </Alert>
-          )}
-          {!isFetchingAdvice && !aiError && aiAdvice && (
-            <div className="space-y-3 text-sm">
-              {aiAdvice.prioritizedLoanName && aiAdvice.prioritizedLoanId ? (
-                <p>
-                  <strong className="text-card-foreground">Recommended Loan to Prepay:</strong>{' '}
-                  <Link href={`/loans/${aiAdvice.prioritizedLoanId}`} className="text-primary hover:underline font-semibold">
-                    {aiAdvice.prioritizedLoanName}
-                  </Link>
-                </p>
-              ) : !aiAdvice.prioritizedLoanId && aiAdvice.prioritizedLoanName && (
-                 <p><strong className="text-card-foreground">Recommended Loan to Prepay:</strong>{' '}{aiAdvice.prioritizedLoanName} (ID not available)</p>
-              )}
-              <p><strong className="text-card-foreground">Reasoning:</strong> {aiAdvice.reasoning}</p>
-              <p><strong className="text-card-foreground">General Tip:</strong> {aiAdvice.generalAdvice}</p>
-            </div>
-          )}
-          {!isFetchingAdvice && !aiAdvice && !aiError && (
-            <p className="text-muted-foreground text-sm">Click the button below to get your personalized prepayment advice based on your active loans.</p>
-          )}
-        </CardContent>
-        <CardFooter>
-          <Button 
-            onClick={handleGetAiAdvice} 
-            disabled={isFetchingAdvice || loanSummaries.filter(s => s.currentPrincipal > 0.01).length === 0}
-          >
-            {isFetchingAdvice ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-            Get AI Advice
-          </Button>
-        </CardFooter>
-      </Card>
       
       {loanSummaries.length === 0 && !isLoading && (
         <Card className="w-full shadow-lg">
