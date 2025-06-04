@@ -30,7 +30,7 @@ import {
   Calculator, 
   NotebookPen,
   Lightbulb,
-  Balance, // Added Balance icon
+  Scale, // Corrected: Using Scale icon
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -46,7 +46,7 @@ const menuItems = [
   { href: '/prepayment-simulator', label: 'Prepayment Simulator', icon: Calculator },
   { href: '/emi-calculator', label: 'EMI Calculator', icon: NotebookPen },
   { href: '/what-if-analyzer', label: 'What-if Analyzer', icon: Lightbulb },
-  { href: '/loan-comparison', label: 'Loan Comparison', icon: Balance },
+  { href: '/loan-comparison', label: 'Loan Comparison', icon: Scale }, // Corrected: Using Scale icon
 ];
 
 const generalItems = [
