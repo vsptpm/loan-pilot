@@ -46,13 +46,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react'; // Added Suspense
 import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Loan } from '@/types';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { useIsMobile } from '@/hooks/use-mobile'; // Added useIsMobile import
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -67,6 +67,15 @@ const generalItems = [
   { href: '/help', label: 'Help', icon: HelpCircle },
 ];
 
+function PageLoadingFallback() {
+  return (
+    <div className="flex items-center justify-center h-[calc(100vh-12rem)]"> {/* Adjusted height */}
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <p className="ml-3 text-muted-foreground">Loading content...</p>
+    </div>
+  );
+}
+
 export default function AppLayout({
   children,
 }: {
@@ -77,7 +86,7 @@ export default function AppLayout({
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); // This hook needs Suspense
   const [searchTerm, setSearchTerm] = useState('');
 
   const [allLoansForSuggestions, setAllLoansForSuggestions] = useState<Pick<Loan, 'id' | 'name'>[]>([]);
@@ -423,9 +432,12 @@ export default function AppLayout({
           </div>
         </header>
         <main className="flex-1 p-4 md:p-8">
-          {children}
+          <Suspense fallback={<PageLoadingFallback />}>
+            {children}
+          </Suspense>
         </main>
       </SidebarInset>
     </SidebarProvider>
   );
 }
+
