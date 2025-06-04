@@ -4,7 +4,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2, Flame, ShieldCheck } from 'lucide-react';
+import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2, Flame, ShieldCheck, CalendarCheck } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -28,7 +28,7 @@ import {
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { FinancialPlanningIllustration } from '@/components/illustrations/FinancialPlanningIllustration';
-import { parseISO } from 'date-fns';
+import { parseISO, differenceInCalendarMonths, differenceInCalendarDays } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 
 
@@ -42,6 +42,12 @@ interface DashboardLoanSummary {
   nextDueDate: string | null;
   originalLoan: Loan; 
   status: LoanStatus;
+}
+
+interface UpcomingMilestone {
+  loanName: string;
+  closureDate: string;
+  timeRemainingString: string;
 }
 
 
@@ -106,7 +112,7 @@ export default function DashboardPage() {
   }, [loans]);
 
   const dashboardStats = useMemo(() => {
-    const activeLoanSummaries = loanSummaries.filter(s => s.currentPrincipal > 0.01);
+    const activeLoanSummaries = loanSummaries.filter(s => s.status.currentBalance > 0.01);
     
     let highestInterestLoan: DashboardLoanSummary | null = null;
     let lowestInterestLoan: DashboardLoanSummary | null = null;
@@ -126,6 +132,7 @@ export default function DashboardPage() {
         nextActionMessage: "Add your first loan to see next actions.",
         highestInterestLoan: null,
         lowestInterestLoan: null,
+        upcomingMilestone: null,
       };
     }
 
@@ -137,7 +144,7 @@ export default function DashboardPage() {
     const overallProgressPercentage = totalBorrowed > 0 ? (totalRepaidSoFar / totalBorrowed) * 100 : 0;
 
     const activeLoansWithDueDates = loanSummaries
-      .filter(s => s.nextDueDate && s.currentPrincipal > 0)
+      .filter(s => s.nextDueDate && s.status.currentBalance > 0)
       .sort((a, b) => {
         if (!a.nextDueDate || !b.nextDueDate) return 0;
         try {
@@ -151,10 +158,54 @@ export default function DashboardPage() {
     if (activeLoansWithDueDates.length > 0) {
       const nextLoanAction = activeLoansWithDueDates[0];
       nextActionMessage = `Next EMI for '${nextLoanAction.name}' due ${formatDate(nextLoanAction.nextDueDate!)}.`;
-    } else if (loanSummaries.every(s => s.currentPrincipal === 0)) {
+    } else if (loanSummaries.every(s => s.status.currentBalance === 0)) {
       nextActionMessage = "All loans are paid off! 🎉";
     } else {
       nextActionMessage = "No upcoming EMIs found for active loans. Check loan details.";
+    }
+
+    let upcomingMilestone: UpcomingMilestone | null = null;
+    const activeLoansWithClosureDates = loanSummaries
+      .filter(s => s.status.currentBalance > 0.01 && s.status.estimatedClosureDate)
+      .sort((a, b) => {
+        if (!a.status.estimatedClosureDate || !b.status.estimatedClosureDate) return 0;
+        try {
+          return parseISO(a.status.estimatedClosureDate).getTime() - parseISO(b.status.estimatedClosureDate).getTime();
+        } catch { return 0; }
+      });
+
+    if (activeLoansWithClosureDates.length > 0) {
+      const nextToFinish = activeLoansWithClosureDates[0];
+      const now = new Date();
+      const closureDateTime = parseISO(nextToFinish.status.estimatedClosureDate!);
+      
+      let timeRemainingStr = "";
+      const monthsRemaining = differenceInCalendarMonths(closureDateTime, now);
+      
+      if (monthsRemaining < 0) {
+        timeRemainingStr = "Closure date passed, verify loan status.";
+      } else if (monthsRemaining === 0) {
+        const daysRemaining = differenceInCalendarDays(closureDateTime, now);
+        if (daysRemaining < 0) {
+            timeRemainingStr = "Closure date just passed.";
+        } else if (daysRemaining === 0) {
+            timeRemainingStr = "Finishing today!";
+        } else if (daysRemaining === 1) {
+            timeRemainingStr = "Finishing tomorrow!";
+        } else {
+            timeRemainingStr = `Finishing in ${daysRemaining} days.`;
+        }
+      } else if (monthsRemaining === 1) {
+        timeRemainingStr = "Finishing next month.";
+      } else {
+        timeRemainingStr = `Finishing in ${monthsRemaining} months.`;
+      }
+
+      upcomingMilestone = {
+        loanName: nextToFinish.name,
+        closureDate: nextToFinish.status.estimatedClosureDate!,
+        timeRemainingString: timeRemainingStr,
+      };
     }
     
     return {
@@ -165,6 +216,7 @@ export default function DashboardPage() {
       nextActionMessage,
       highestInterestLoan,
       lowestInterestLoan,
+      upcomingMilestone,
     };
   }, [loanSummaries]);
 
@@ -273,11 +325,11 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      {/* Loan Insights Section */}
-      {loanSummaries.length > 0 && (dashboardStats.highestInterestLoan || dashboardStats.lowestInterestLoan) && (
+      {/* Loan Insights & Milestones Section */}
+      {(loanSummaries.length > 0 && (dashboardStats.highestInterestLoan || dashboardStats.lowestInterestLoan || dashboardStats.upcomingMilestone)) && (
         <div className="mt-8">
-          <h2 className="text-xl font-headline tracking-tight mb-4">Loan Insights</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <h2 className="text-xl font-headline tracking-tight mb-4">Key Loan Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {dashboardStats.highestInterestLoan && (
               <Card className="shadow-md rounded-xl">
                 <CardHeader>
@@ -306,12 +358,31 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             )}
+             {dashboardStats.upcomingMilestone && (
+              <Card className="shadow-md rounded-xl md:col-span-2 lg:col-span-1"> {/* Spans full on medium if only one, else fits in 3-col layout */}
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                    <CalendarCheck className="mr-2 h-4 w-4 text-blue-500" /> Upcoming Milestone
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-lg font-semibold">{dashboardStats.upcomingMilestone.loanName}</p>
+                  <p className="text-base font-medium text-primary">
+                    Finishing on: {formatDate(dashboardStats.upcomingMilestone.closureDate)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {dashboardStats.upcomingMilestone.timeRemainingString}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
-           {(dashboardStats.highestInterestLoan && dashboardStats.highestInterestLoan.id === dashboardStats.lowestInterestLoan?.id) && (
+           {(dashboardStats.highestInterestLoan && dashboardStats.highestInterestLoan.id === dashboardStats.lowestInterestLoan?.id && !dashboardStats.upcomingMilestone && activeLoanSummaries.length === 1) && (
               <p className="text-xs text-center text-muted-foreground mt-2">You have only one active loan, so it's listed as both highest and lowest interest.</p>
             )}
         </div>
       )}
+
 
       {loanSummaries.length === 0 && !isLoading && (
         <Card className="w-full shadow-lg mt-8">
@@ -339,7 +410,7 @@ export default function DashboardPage() {
       
       {loanSummaries.length > 0 && (
         <>
-          <h2 className="text-2xl font-headline tracking-tight mt-10">Active Loans ({loanSummaries.filter(s => s.currentPrincipal > 0.01).length})</h2>
+          <h2 className="text-2xl font-headline tracking-tight mt-10">Active Loans ({loanSummaries.filter(s => s.status.currentBalance > 0.01).length})</h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {loanSummaries.map((summary) => (
               <Link key={summary.id} href={`/loans/${summary.id}`} legacyBehavior passHref>

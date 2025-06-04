@@ -1,6 +1,6 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Flame, ShieldCheck } from 'lucide-react';
+import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Flame, ShieldCheck, CalendarCheck } from 'lucide-react';
 
 export default function DashboardLoading() {
   return (
@@ -47,20 +47,23 @@ export default function DashboardLoading() {
         </div>
       </div>
       
-      {/* Loan Insights Skeleton */}
+      {/* Key Loan Information Skeleton (Insights & Milestones) */}
       <div className="mt-8">
-        <Skeleton className="h-7 w-40 mb-4 rounded" /> {/* Loan Insights Title */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[1, 2].map((item) => (
-            <div key={item} className="shadow-md rounded-xl bg-card p-4">
+        <Skeleton className="h-7 w-52 mb-4 rounded" /> {/* "Key Loan Information" Title */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            { icon: <Flame className="h-4 w-4 text-muted-foreground" />, title: "Highest Interest Loan" },
+            { icon: <ShieldCheck className="h-4 w-4 text-muted-foreground" />, title: "Lowest Interest Loan" },
+            { icon: <CalendarCheck className="h-4 w-4 text-muted-foreground" />, title: "Upcoming Milestone", fullWidthOnTablet: true }
+          ].map((item, index) => (
+            <div key={index} className={`shadow-md rounded-xl bg-card p-4 ${item.fullWidthOnTablet ? 'md:col-span-2 lg:col-span-1' : ''}`}>
               <div className="flex items-center justify-between mb-2">
-                <Skeleton className="h-5 w-32 rounded" /> {/* Insight Card Title */}
-                {item === 1 && <Flame className="h-4 w-4 text-muted-foreground" />}
-                {item === 2 && <ShieldCheck className="h-4 w-4 text-muted-foreground" />}
+                <Skeleton className="h-5 w-3/5 rounded" /> {/* Insight Card Title */}
+                {item.icon}
               </div>
               <Skeleton className="h-6 w-4/5 mb-1 rounded" /> {/* Loan Name */}
-              <Skeleton className="h-8 w-1/2 mb-2 rounded" /> {/* Interest Rate */}
-              <Skeleton className="h-3 w-full rounded" /> {/* Description line */}
+              <Skeleton className="h-8 w-1/2 mb-2 rounded" /> {/* Interest Rate / Date */}
+              <Skeleton className="h-3 w-full rounded" /> {/* Description line / Time Remaining */}
             </div>
           ))}
         </div>
