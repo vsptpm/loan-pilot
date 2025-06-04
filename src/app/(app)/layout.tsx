@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   LayoutDashboard,
   Settings,
@@ -30,7 +31,7 @@ import {
   Calculator, 
   NotebookPen,
   Lightbulb,
-  Scale, // Corrected: Using Scale icon
+  Scale,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -39,6 +40,7 @@ import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Loan } from '@/types';
 import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -46,7 +48,7 @@ const menuItems = [
   { href: '/prepayment-simulator', label: 'Prepayment Simulator', icon: Calculator },
   { href: '/emi-calculator', label: 'EMI Calculator', icon: NotebookPen },
   { href: '/what-if-analyzer', label: 'What-if Analyzer', icon: Lightbulb },
-  { href: '/loan-comparison', label: 'Loan Comparison', icon: Scale }, // Corrected: Using Scale icon
+  { href: '/loan-comparison', label: 'Loan Comparison', icon: Scale },
 ];
 
 const generalItems = [
@@ -127,6 +129,8 @@ export default function AppLayout({
   }
 
   if (!user) {
+    // This case should ideally be handled by AuthProvider redirecting,
+    // but as a fallback, show loading or a redirect message.
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -135,10 +139,17 @@ export default function AppLayout({
     );
   }
 
-  const getInitials = (email?: string | null) => {
-    if (!email) return 'U';
-    return email.substring(0, 2).toUpperCase();
+  const getInitials = (nameOrEmail?: string | null) => {
+    if (!nameOrEmail) return 'U';
+    if (nameOrEmail.includes('@') && nameOrEmail.split(' ').length === 1) { // Check if it's likely an email
+      return nameOrEmail.substring(0, 2).toUpperCase();
+    }
+    // Assume it's a name
+    const names = nameOrEmail.split(' ');
+    if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
+    return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
   };
+
 
   const handleSearch = () => {
     const trimmedSearchTerm = searchTerm.trim();
@@ -347,16 +358,40 @@ export default function AppLayout({
             
             <div className="flex items-center gap-3 flex-shrink-0">
               <ThemeToggle />
-              <div className="flex items-center gap-2">
-                <Avatar className="h-9 w-9">
-                  <AvatarImage src={user?.photoURL || `https://placehold.co/40x40.png`} alt={user?.displayName || 'User'} />
-                  <AvatarFallback>{getInitials(user?.email)}</AvatarFallback>
-                </Avatar>
-                <div className="hidden md:flex flex-col text-xs">
-                  <span className="font-semibold text-foreground">{user?.displayName || user?.email?.split('@')[0]}</span>
-                  <span className="text-muted-foreground">{user?.email}</span>
-                </div>
-              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={user?.photoURL || `https://placehold.co/40x40.png`} alt={user?.displayName || 'User'} data-ai-hint="profile person" />
+                      <AvatarFallback>{getInitials(user?.displayName || user?.email)}</AvatarFallback>
+                    </Avatar>
+                     <span className="sr-only">Open user menu</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4" align="end">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={user?.photoURL || `https://placehold.co/60x60.png`} alt={user?.displayName || 'User'} data-ai-hint="profile person" />
+                      <AvatarFallback className="text-xl bg-muted">{getInitials(user?.displayName || user?.email)}</AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-foreground">
+                        {user?.displayName || user?.email?.split('@')[0]}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{user?.email}</p>
+                    </div>
+                  </div>
+                  <Separator className="my-3" />
+                  <Link href="/settings" legacyBehavior passHref>
+                     <Button variant="ghost" className="w-full justify-start text-sm h-auto py-1.5 px-2">
+                        <Settings className="mr-2 h-4 w-4" /> Account Settings
+                     </Button>
+                  </Link>
+                   <Button variant="ghost" className="w-full justify-start text-sm text-destructive hover:text-destructive hover:bg-destructive/10 h-auto py-1.5 px-2" onClick={signOut}>
+                        <LogOut className="mr-2 h-4 w-4" /> Logout
+                   </Button>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </header>
