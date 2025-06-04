@@ -45,7 +45,7 @@ import {
   getInitialPaidEMIsCount,
   getLoanStatus
 } from '@/lib/loanUtils';
-import { Loader2, Edit3, Landmark as RecordIcon, ListChecks, Trash2, CircleDollarSign, Repeat, Wallet } from 'lucide-react';
+import { Loader2, Edit3, Landmark as RecordIcon, ListChecks, Trash2, CircleDollarSign, Repeat, Wallet, Download } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -220,6 +220,63 @@ export default function LoanDetailPage() {
     }
   };
 
+  const handleExportToCSV = useCallback(() => {
+    if (!loan || !currentAmortizationSchedule || !loanStatus) {
+      toast({ title: "Error", description: "Loan data not available for export.", variant: "destructive" });
+      return;
+    }
+
+    const escapeCSV = (value: any): string => {
+      if (value === null || value === undefined) return '""';
+      const stringValue = String(value);
+      if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    const headers = [
+      "Loan Name:", escapeCSV(loan.name),
+      "\nOriginal Principal:", escapeCSV(formatCurrency(loan.principalAmount)),
+      "\nInterest Rate:", escapeCSV(`${loan.interestRate}%`),
+      "\nStart Date:", escapeCSV(formatDate(loan.startDate)),
+      "\nTotal Prepayments Made:", escapeCSV(formatCurrency(loan.totalPrepaymentAmount || 0)),
+      "\nOutstanding Balance (as of today):", escapeCSV(formatCurrency(loanStatus.currentBalance)),
+      "\n" // Empty line
+    ];
+    
+    const scheduleHeaders = ["Month", "Payment Date", "Payment", "Principal Paid", "Interest Paid", "Remaining Balance", "Status"];
+    const scheduleRows = currentAmortizationSchedule.map(entry => [
+      escapeCSV(entry.month),
+      escapeCSV(formatDate(entry.paymentDate)),
+      escapeCSV(formatCurrency(entry.payment)),
+      escapeCSV(formatCurrency(entry.principalPaid)),
+      escapeCSV(formatCurrency(entry.interestPaid)),
+      escapeCSV(formatCurrency(entry.remainingBalance)),
+      escapeCSV(entry.isPaid ? "Paid" : "Upcoming")
+    ].join(','));
+
+    const csvContent = headers.join('') + scheduleHeaders.join(',') + '\n' + scheduleRows.join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      const safeLoanName = loan.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      link.setAttribute("download", `loan_schedule_${safeLoanName}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast({ title: "Success", description: "Loan schedule exported to CSV."});
+    } else {
+      toast({ title: "Error", description: "CSV export not supported by your browser.", variant: "destructive"});
+    }
+  }, [loan, currentAmortizationSchedule, loanStatus, toast]);
+
+
   if (loading || loadingPrepayments) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
@@ -243,7 +300,7 @@ export default function LoanDetailPage() {
         <CardHeader>
           <div className="flex justify-between items-start gap-2">
             <CardTitle className="text-2xl sm:text-3xl font-headline flex-grow">{loan.name}</CardTitle>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
               {loanIdString && (
                 <Link href={`/loans/edit/${loanIdString}`} legacyBehavior passHref>
                   <Button variant="outline" size="sm" asChild className="h-9">
@@ -272,6 +329,9 @@ export default function LoanDetailPage() {
                   />
                 </DialogContent>
               </Dialog>
+              <Button variant="outline" size="sm" className="h-9" onClick={handleExportToCSV}>
+                <Download className="mr-2 h-4 w-4" /> Export CSV
+              </Button>
             </div>
           </div>
           <CardDescription>Detailed overview of your loan, reflecting all recorded prepayments. Assumes on-time EMI payments up to today.</CardDescription>
@@ -482,3 +542,6 @@ export default function LoanDetailPage() {
     </div>
   );
 }
+
+
+    
