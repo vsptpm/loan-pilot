@@ -5,6 +5,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from 'next-themes';
+import { Suspense } from 'react'; // Added Suspense
 
 export const metadata: Metadata = {
   title: 'LoanPilot',
@@ -17,6 +18,25 @@ const inter = Inter({ // Using Inter font
   variable: '--font-inter', // Added variable for consistency if needed
 });
 
+// Define a simple fallback for RootLayout
+function RootLayoutLoadingFallback() {
+  // Basic inline styles to avoid dependency on Tailwind CSS not yet loaded or specific components
+  const style: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    // Attempt to use CSS variables if they are defined early, otherwise fallback
+    backgroundColor: 'var(--background, #f9fafb)', // Fallback to a light gray
+    color: 'var(--foreground, #030712)', // Fallback to a dark color
+    fontFamily: 'sans-serif',
+  };
+  return (
+    <div style={style}>
+      <p>Loading LoanPilot...</p>
+    </div>
+  );
+}
 
 export default function RootLayout({
   children,
@@ -35,7 +55,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            {children}
+            <Suspense fallback={<RootLayoutLoadingFallback />}>
+              {children}
+            </Suspense>
             <Toaster />
           </AuthProvider>
         </ThemeProvider>
