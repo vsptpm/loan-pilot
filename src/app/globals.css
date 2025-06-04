@@ -1,112 +1,89 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Apply base font styles using CSS variables defined in layout.tsx and tailwind.config.ts */
-@layer base {
-  html {
-    font-family: var(--font-alegreya), system-ui, sans-serif; /* Default to Alegreya for body */
-  }
-  h1, h2, h3, h4, h5, h6, .font-headline { /* .font-headline for components like CardTitle */
-    font-family: var(--font-belleza), system-ui, sans-serif; /* Belleza for headlines */
-  }
-}
+/* Removed @layer base for Alegreya and Belleza fonts */
 
 @layer base {
   :root {
-    /* LoanPilot Light Theme - Muted Blue & Teal */
-    --background: 180 10% 95%; /* Very Light Blue: #F0F4F4 (HSL: 180, 10%, 95%) - Adjusted for clarity */
-    --foreground: 180 15% 30%; /* Darker Muted Blue/Grey for text (e.g. HSL: 180, 15%, 30%) */
+    /* Reverted to original theme from the project's initial setup */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
 
-    --card: 0 0% 100%; /* White for cards */
-    --card-foreground: 180 15% 30%;
-
-    --popover: 0 0% 100%; /* White for popovers */
-    --popover-foreground: 180 15% 30%;
-
-    --primary: 181 25% 46%; /* Muted Blue (Primary): #5C8D8E (HSL: 181, 25%, 46%) */
-    --primary-foreground: 0 0% 100%; /* White text on primary */
-
-    --secondary: 180 10% 88%; /* Lighter shade of background for secondary elements, or a compatible grey */
-    --secondary-foreground: 181 25% 30%; /* Darker text for secondary elements */
-
-    --muted: 180 10% 90%; /* Slightly darker than background for muted elements */
-    --muted-foreground: 180 10% 45%; /* Greyer text for muted */
-
-    --accent: 181 33% 35%; /* Deep Teal (Accent): #3E7879 (HSL: 181, 33%, 35%) */
-    --accent-foreground: 0 0% 100%; /* White text on accent */
-
-    --destructive: 0 72% 51%; /* Standard Red */
-    --destructive-foreground: 0 0% 100%; /* White */
-
-    --border: 180 10% 80%; /* Slightly darker border than muted */
-    --input: 180 10% 92%; /* Slightly off-white/light blue for inputs */
-    --ring: 181 25% 46%; /* Primary color for focus rings */
-
-    --chart-1: 181 25% 46%; /* Primary */
-    --chart-2: 181 33% 35%; /* Accent */
-    --chart-3: 181 25% 60%; /* Lighter Primary */
-    --chart-4: 181 33% 50%; /* Lighter Accent */
-    --chart-5: 180 15% 50%; /* Muted Grey/Blue */
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 50%;
 
     --radius: 0.5rem;
 
-    /* Sidebar Specific Colors - harmonizing with the main theme */
-    --sidebar-background: 0 0% 100%; /* White or a very light off-white */
-    --sidebar-foreground: 180 15% 30%; /* Main foreground color */
-    --sidebar-primary: 181 25% 46%; /* Main primary color */
-    --sidebar-primary-foreground: 0 0% 100%; /* White */
-    --sidebar-accent: 180 10% 92%; /* Very Light Blue (like input background) for hover */
-    --sidebar-accent-foreground: 181 25% 35%; /* Darker primary/accent for text on hover */
-    --sidebar-border: 180 10% 85%; 
-    --sidebar-ring: 181 25% 46%;
+    /* Sidebar Specific Colors - reverted to original setup */
+    --sidebar-background: 222.2 80% 5.5%; 
+    --sidebar-foreground: 210 40% 90%;    
+    --sidebar-primary: 217.2 91.2% 59.8%; 
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%; 
+    --sidebar-accent: 217.2 32.6% 22.5%;  
+    --sidebar-accent-foreground: 210 40% 98%; 
+    --sidebar-border: 217.2 32.6% 15.5%; 
+    --sidebar-ring: 224.3 76.3% 48%; 
   }
 
   .dark {
-    /* LoanPilot Dark Theme - Muted Blue & Teal */
-    --background: 180 10% 10%; /* Very Dark Blue/Grey: (e.g., HSL: 180, 10%, 10%) */
-    --foreground: 180 10% 85%; /* Light Grey/Off-white Text */
+    /* Reverted to original dark theme from the project's initial setup */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
 
-    --card: 180 10% 15%; /* Darker shade for cards */
-    --card-foreground: 180 10% 85%;
-
-    --popover: 180 10% 12%; /* Slightly darker for popovers */
-    --popover-foreground: 180 10% 85%;
-
-    --primary: 181 25% 55%; /* Muted Blue (Primary) - slightly lighter for dark mode: HSL(181, 25%, 55%) */
-    --primary-foreground: 0 0% 100%; /* White text on primary */
-
-    --secondary: 180 10% 25%; /* Darker muted shade */
-    --secondary-foreground: 180 10% 80%;
-
-    --muted: 180 10% 20%; /* Darker Muted Background */
-    --muted-foreground: 180 10% 65%; /* Muted Grey Text */
-
-    --accent: 181 33% 45%; /* Deep Teal (Accent) - slightly lighter for dark mode: HSL(181, 33%, 45%) */
-    --accent-foreground: 0 0% 100%; /* White */
-
-    --destructive: 0 60% 50%; /* Red */
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 180 10% 25%; /* Dark Border */
-    --input: 180 10% 18%; /* Dark Input Background */
-    --ring: 181 25% 55%; /* Primary color for focus rings */
-
-    --chart-1: 181 25% 55%;
-    --chart-2: 181 33% 45%;
-    --chart-3: 181 25% 70%;
-    --chart-4: 181 33% 60%;
-    --chart-5: 180 10% 50%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 50%;
     
-    /* Sidebar Specific Colors - Pitch Black theme */
-    --sidebar-background: 180 10% 12%; /* Dark shade for sidebar */
-    --sidebar-foreground: 180 10% 80%; /* Light grey text */
-    --sidebar-primary: 181 25% 55%; /* Primary color for active/hover */
-    --sidebar-primary-foreground: 0 0% 100%; /* White */
-    --sidebar-accent: 180 10% 22%; /* Darker accent for hover backgrounds */
-    --sidebar-accent-foreground: 181 25% 70%; /* Lighter primary/accent text on hover */
-    --sidebar-border: 180 10% 25%; 
-    --sidebar-ring: 181 25% 55%;
+    /* Sidebar Specific Colors - reverted to original setup */
+    --sidebar-background: 222.2 80% 5.5%;
+    --sidebar-foreground: 210 40% 90%;   
+    --sidebar-primary: 217.2 91.2% 59.8%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 217.2 32.6% 22.5%; 
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 15.5%;
+    --sidebar-ring: 224.3 76.3% 48%;
   }
 }
 

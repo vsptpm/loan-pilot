@@ -13,28 +13,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, UserCircle, LockKeyhole, Eye, EyeOff, Save, UploadCloud } from 'lucide-react';
+import { Loader2, UserCircle, LockKeyhole, Eye, EyeOff, Save } from 'lucide-react';
 import { updateProfile, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { auth, storage } from '@/lib/firebase'; // Import storage
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
+import { auth } from '@/lib/firebase';
 
 const profileFormSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }).max(50, { message: 'Full name is too long.' }),
-  newProfileImage: z
-    .instanceof(File)
-    .optional()
-    .nullable()
-    .refine(
-      (file) => !file || file.size <= MAX_FILE_SIZE,
-      `Max image size is 2MB.`
-    )
-    .refine(
-      (file) => !file || ACCEPTED_IMAGE_TYPES.includes(file.type),
-      "Only .jpg, .jpeg, .png and .gif formats are accepted."
-    ),
+  photoURL: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -59,15 +44,12 @@ export default function SettingsPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       fullName: '',
-      newProfileImage: null,
+      photoURL: '',
     },
   });
 
@@ -84,21 +66,11 @@ export default function SettingsPage() {
     if (user) {
       profileForm.reset({
         fullName: user.displayName || '',
-        newProfileImage: null, // Reset file input
+        photoURL: user.photoURL || '',
       });
-      setImagePreview(user.photoURL); // Set initial preview to current user photo
     }
   }, [user, profileForm]);
   
-  // Cleanup object URL
-  useEffect(() => {
-    return () => {
-      if (imagePreview && imagePreview.startsWith('blob:')) {
-        URL.revokeObjectURL(imagePreview);
-      }
-    };
-  }, [imagePreview]);
-
 
   const handleProfileUpdate = async (values: ProfileFormValues) => {
     if (!user) {
@@ -106,56 +78,18 @@ export default function SettingsPage() {
       return;
     }
     setIsProfileUpdating(true);
-    setUploadProgress(null);
-
-    let finalPhotoURL = user.photoURL; // Keep current photoURL by default
 
     try {
-      if (values.newProfileImage) {
-        const file = values.newProfileImage;
-        const storageRef = ref(storage, `profileImages/${user.uid}/${file.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
-        await new Promise<void>((resolve, reject) => {
-          uploadTask.on('state_changed',
-            (snapshot) => {
-              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-              setUploadProgress(progress);
-            },
-            (error) => {
-              console.error("Upload failed:", error);
-              toast({ title: 'Image Upload Failed', description: error.message, variant: 'destructive' });
-              reject(error);
-            },
-            async () => {
-              finalPhotoURL = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve();
-            }
-          );
-        });
-      }
-
       await updateProfile(user, {
         displayName: values.fullName,
-        photoURL: finalPhotoURL,
+        photoURL: values.photoURL || null, 
       });
       toast({ title: 'Success', description: 'Profile updated successfully!' });
-      // AuthProvider should pick up the changes via onAuthStateChanged
-      // and update the user object in context, triggering navbar update.
-      profileForm.reset({ fullName: values.fullName, newProfileImage: null }); // Reset form, clear file input
-      if (finalPhotoURL && finalPhotoURL !== imagePreview && !finalPhotoURL.startsWith('blob:')) {
-        setImagePreview(finalPhotoURL); // Update preview to the new persistent URL
-      }
-
-
+       // The AuthProvider will pick up changes via onAuthStateChanged.
     } catch (error: any) {
-      // Error is already toasted by uploadTask error handler or if updateProfile itself fails.
-      if (!values.newProfileImage) { // only toast if it's not an upload error which is handled above
-         toast({ title: 'Error updating profile', description: error.message, variant: 'destructive' });
-      }
+      toast({ title: 'Error updating profile', description: error.message, variant: 'destructive' });
     } finally {
       setIsProfileUpdating(false);
-      setUploadProgress(null);
     }
   };
 
@@ -214,14 +148,14 @@ export default function SettingsPage() {
             <UserCircle className="h-6 w-6 text-primary" />
             <CardTitle className="text-xl font-headline">Profile Information</CardTitle>
           </div>
-          <CardDescription>Update your display name and profile picture.</CardDescription>
+          <CardDescription>Update your display name and profile picture URL.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center space-x-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={imagePreview || undefined} alt={profileForm.getValues('fullName') || user?.displayName || "User"} data-ai-hint="profile person"/>
+              <AvatarImage src={profileForm.watch('photoURL') || user?.photoURL || undefined} alt={profileForm.watch('fullName') || user?.displayName || "User"} data-ai-hint="profile person"/>
               <AvatarFallback className="text-2xl bg-muted">
-                {getInitials(profileForm.getValues('fullName') || user?.displayName)}
+                {getInitials(profileForm.watch('fullName') || user?.displayName)}
               </AvatarFallback>
             </Avatar>
             <div>
@@ -247,50 +181,22 @@ export default function SettingsPage() {
               />
               <FormField
                 control={profileForm.control}
-                name="newProfileImage"
-                render={({ field: { onChange, value, ...restField } }) => (
+                name="photoURL"
+                render={({ field }) => (
                   <FormItem>
-                    <FormLabel>New Profile Picture</FormLabel>
+                    <FormLabel>Photo URL</FormLabel>
                     <FormControl>
                       <Input 
-                        type="file" 
-                        accept="image/png, image/jpeg, image/gif"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          onChange(file || null);
-                          if (file) {
-                            if (imagePreview && imagePreview.startsWith('blob:')) {
-                                URL.revokeObjectURL(imagePreview); 
-                            }
-                            setImagePreview(URL.createObjectURL(file));
-                          } else if (!user?.photoURL) { // if no file selected and no existing user photo, clear preview
-                            if (imagePreview && imagePreview.startsWith('blob:')) {
-                                URL.revokeObjectURL(imagePreview); 
-                            }
-                            setImagePreview(null);
-                          } else { // if no file selected but there is an existing photo, revert preview to it
-                             if (imagePreview && imagePreview.startsWith('blob:')) {
-                                URL.revokeObjectURL(imagePreview); 
-                            }
-                            setImagePreview(user.photoURL);
-                          }
-                        }}
-                        {...restField}
+                        type="url" 
+                        placeholder="https://example.com/your-image.png" 
+                        {...field}
                       />
                     </FormControl>
-                    <FormDescription>Optional. Max 2MB. JPG, PNG, GIF.</FormDescription>
+                    <FormDescription>Optional. Enter the URL of your profile picture.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-               {uploadProgress !== null && (
-                <div className="space-y-1">
-                  <Label className="text-xs">Upload Progress: {Math.round(uploadProgress)}%</Label>
-                  <div className="w-full bg-muted rounded-full h-1.5">
-                    <div className="bg-primary h-1.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>
-                  </div>
-                </div>
-              )}
               <Button type="submit" disabled={isProfileUpdating}>
                 {isProfileUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Save Profile
@@ -399,4 +305,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

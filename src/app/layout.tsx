@@ -1,6 +1,7 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
-import { Alegreya, Belleza } from 'next/font/google'; // Import Belleza and Alegreya
+// Alegreya and Belleza imports removed
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from 'next-themes';
@@ -10,20 +11,7 @@ export const metadata: Metadata = {
   description: 'Manage your personal loans effectively with LoanPilot.',
 };
 
-// Configure Belleza font for headlines
-const belleza = Belleza({
-  subsets: ['latin'],
-  weight: ['400'], // Belleza is typically available in regular weight
-  variable: '--font-belleza',
-});
-
-// Configure Alegreya font for body text
-const alegreya = Alegreya({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'], // Include various weights if needed
-  style: ['normal', 'italic'],
-  variable: '--font-alegreya',
-});
+// Belleza and Alegreya font configurations removed
 
 export default function RootLayout({
   children,
@@ -33,10 +21,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Google Fonts preconnect for Belleza and Alegreya are handled by next/font */}
+        {/* Google Fonts preconnect reverted or assuming default behavior */}
       </head>
-      {/* Apply font variables and Tailwind's font-sans/font-headline class */}
-      <body className={`${belleza.variable} ${alegreya.variable} font-sans antialiased min-h-screen bg-background text-foreground`}>
+      {/* Font variables removed from body className */}
+      <body className={`antialiased min-h-screen bg-background text-foreground`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

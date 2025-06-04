@@ -1,5 +1,6 @@
+
 import type {Config} from 'tailwindcss';
-const defaultTheme = require('tailwindcss/defaultTheme'); // Import defaultTheme
+// defaultTheme import removed as it's not used in the reverted state
 
 export default {
   darkMode: ['class'],
@@ -17,11 +18,7 @@ export default {
       },
     },
     extend: {
-      fontFamily: {
-        sans: ['var(--font-alegreya)', ...defaultTheme.fontFamily.serif], // Body font
-        headline: ['var(--font-belleza)', ...defaultTheme.fontFamily.sans], // Headline font
-        code: ['monospace', 'monospace'], 
-      },
+      // fontFamily section for Alegreya and Belleza removed
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
