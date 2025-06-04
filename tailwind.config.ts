@@ -18,10 +18,7 @@ export default {
       },
     },
     extend: {
-      fontFamily: {
-        sans: ['var(--font-alegreya)', ...defaultTheme.fontFamily.serif], // Body font (Alegreya - serif)
-        headline: ['var(--font-belleza)', ...defaultTheme.fontFamily.sans], // Headline font (Belleza - sans-serif)
-      },
+      // Removed custom fontFamily for sans and headline
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
