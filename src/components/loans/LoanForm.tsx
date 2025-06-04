@@ -194,7 +194,14 @@ export function LoanForm({ onSubmit, initialData, isLoading = false, submitButto
               <FormItem>
                 <FormLabel>Amount Already Paid (₹) (Optional)</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" placeholder="e.g., 10000" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ""} />
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="e.g., 10000" 
+                    {...field} 
+                    onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} 
+                    value={field.value !== undefined ? String(field.value) : ""} 
+                  />
                 </FormControl>
                 <FormDescription>If you&apos;ve already made some payments.</FormDescription>
                 <FormMessage />
