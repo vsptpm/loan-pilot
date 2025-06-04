@@ -256,7 +256,7 @@ export default function LoanDetailPage() {
       escapeCSV(entry.isPaid ? "Paid" : "Upcoming")
     ].join(','));
 
-    const csvContent = headers.join('') + scheduleHeaders.join(',') + '\n' + scheduleRows.join('\n');
+    const csvContent = "\uFEFF" + headers.join('') + scheduleHeaders.join(',') + '\n' + scheduleRows.join('\n');
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
@@ -543,5 +543,7 @@ export default function LoanDetailPage() {
   );
 }
 
+
+    
 
     
