@@ -4,7 +4,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2, Flame, ShieldCheck, CalendarCheck, Landmark } from 'lucide-react';
+import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2, Flame, ShieldCheck, CalendarCheck, Wallet, ReceiptText } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -131,6 +131,8 @@ export default function DashboardPage() {
       return {
         totalBorrowed: 0,
         totalRepaidSoFar: 0,
+        totalOutstandingBalance: 0,
+        totalInterestPaidOverall: 0,
         averageInterestRate: 0,
         overallProgressPercentage: 0,
         nextActionMessage: "Add your first loan to see next actions.",
@@ -146,6 +148,9 @@ export default function DashboardPage() {
     const averageInterestRate = loanSummaries.length > 0 ? totalInterestRateSum / loanSummaries.length : 0;
     
     const overallProgressPercentage = totalBorrowed > 0 ? (totalRepaidSoFar / totalBorrowed) * 100 : 0;
+
+    const totalInterestPaidOverall = loanSummaries.reduce((sum, s) => sum + s.status.totalInterestPaid, 0);
+    const totalOutstandingBalance = loanSummaries.reduce((sum, s) => sum + s.status.currentBalance, 0);
 
     const activeLoansWithDueDates = loanSummaries
       .filter(s => s.nextDueDate && s.status.currentBalance > 0)
@@ -215,6 +220,8 @@ export default function DashboardPage() {
     return {
       totalBorrowed,
       totalRepaidSoFar,
+      totalOutstandingBalance: parseFloat(totalOutstandingBalance.toFixed(2)),
+      totalInterestPaidOverall: parseFloat(totalInterestPaidOverall.toFixed(2)),
       averageInterestRate: parseFloat(averageInterestRate.toFixed(2)),
       overallProgressPercentage: parseFloat(overallProgressPercentage.toFixed(2)),
       nextActionMessage,
@@ -283,7 +290,7 @@ export default function DashboardPage() {
           <Card className="shadow-md rounded-xl">
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-                <TrendingDown className="mr-2 h-4 w-4 text-destructive" /> Borrowed
+                <TrendingDown className="mr-2 h-4 w-4 text-destructive" /> Total Borrowed
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -293,17 +300,37 @@ export default function DashboardPage() {
           <Card className="shadow-md rounded-xl">
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-                <TrendingUpIcon className="mr-2 h-4 w-4 text-green-500" /> Repaid
+                <TrendingUpIcon className="mr-2 h-4 w-4 text-green-500" /> Total Repaid (Principal)
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">{formatCurrency(dashboardStats.totalRepaidSoFar)}</p>
             </CardContent>
           </Card>
+           <Card className="shadow-md rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                <Wallet className="mr-2 h-4 w-4 text-indigo-500" /> Outstanding Balance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{formatCurrency(dashboardStats.totalOutstandingBalance)}</p>
+            </CardContent>
+          </Card>
+           <Card className="shadow-md rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                <ReceiptText className="mr-2 h-4 w-4 text-amber-600" /> Total Interest Paid
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{formatCurrency(dashboardStats.totalInterestPaidOverall)}</p>
+            </CardContent>
+          </Card>
           <Card className="shadow-md rounded-xl">
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-                <Percent className="mr-2 h-4 w-4 text-blue-500" /> Average Rate
+                <Percent className="mr-2 h-4 w-4 text-blue-500" /> Avg. Interest Rate
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -461,4 +488,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

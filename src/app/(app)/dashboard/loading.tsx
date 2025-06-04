@@ -1,6 +1,6 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Flame, ShieldCheck, CalendarCheck } from 'lucide-react';
+import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Flame, ShieldCheck, CalendarCheck, Wallet, ReceiptText } from 'lucide-react';
 
 export default function DashboardLoading() {
   return (
@@ -28,17 +28,19 @@ export default function DashboardLoading() {
 
         {/* Stats Cards Skeleton Container */}
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {[1, 2, 3, 4, 5].map((item) => (
-            <div key={item} className={`shadow-md rounded-xl bg-card p-4 ${item === 5 ? 'sm:col-span-2' : ''}`}>
+          {[1, 2, 3, 4, 5, 6, 7].map((item) => (
+            <div key={item} className={`shadow-md rounded-xl bg-card p-4 ${item === 7 ? 'sm:col-span-2' : ''}`}>
               <div className="flex items-center justify-between mb-2">
                 <Skeleton className="h-5 w-24 rounded" />
                 {item === 1 && <TrendingDown className="h-4 w-4 text-muted-foreground" />}
                 {item === 2 && <TrendingUpIcon className="h-4 w-4 text-muted-foreground" />}
-                {item === 3 && <Percent className="h-4 w-4 text-muted-foreground" />}
-                {item === 4 && <Activity className="h-4 w-4 text-muted-foreground" />}
-                {item === 5 && <ListChecks className="h-4 w-4 text-muted-foreground" />}
+                {item === 3 && <Wallet className="h-4 w-4 text-muted-foreground" />}
+                {item === 4 && <ReceiptText className="h-4 w-4 text-muted-foreground" />}
+                {item === 5 && <Percent className="h-4 w-4 text-muted-foreground" />}
+                {item === 6 && <Activity className="h-4 w-4 text-muted-foreground" />}
+                {item === 7 && <ListChecks className="h-4 w-4 text-muted-foreground" />}
               </div>
-              {item === 4 ? (
+              {item === 6 ? ( // Progress bar is for Overall Progress, now item 6
                 <>
                   <Skeleton className="h-3 w-full mb-2 rounded-full" />
                   <Skeleton className="h-4 w-20 mx-auto rounded" />
@@ -46,7 +48,7 @@ export default function DashboardLoading() {
               ) : (
                  <Skeleton className="h-8 w-3/4 rounded" />
               )}
-               {item === 5 && <Skeleton className="h-4 w-5/6 mt-1 rounded" />}
+               {item === 7 && <Skeleton className="h-4 w-5/6 mt-1 rounded" />}
             </div>
           ))}
         </div>
@@ -104,4 +106,3 @@ export default function DashboardLoading() {
     </div>
   );
 }
-
