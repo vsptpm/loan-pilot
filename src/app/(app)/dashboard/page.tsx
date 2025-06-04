@@ -4,7 +4,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2 } from 'lucide-react';
+import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Loader2, Flame, ShieldCheck } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -29,6 +29,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { FinancialPlanningIllustration } from '@/components/illustrations/FinancialPlanningIllustration';
 import { parseISO } from 'date-fns';
+import { Separator } from '@/components/ui/separator';
 
 
 interface DashboardLoanSummary {
@@ -105,6 +106,17 @@ export default function DashboardPage() {
   }, [loans]);
 
   const dashboardStats = useMemo(() => {
+    const activeLoanSummaries = loanSummaries.filter(s => s.currentPrincipal > 0.01);
+    
+    let highestInterestLoan: DashboardLoanSummary | null = null;
+    let lowestInterestLoan: DashboardLoanSummary | null = null;
+
+    if (activeLoanSummaries.length > 0) {
+      highestInterestLoan = [...activeLoanSummaries].sort((a, b) => b.interestRate - a.interestRate)[0];
+      lowestInterestLoan = [...activeLoanSummaries].sort((a, b) => a.interestRate - b.interestRate)[0];
+    }
+
+
     if (loanSummaries.length === 0) {
       return {
         totalBorrowed: 0,
@@ -112,6 +124,8 @@ export default function DashboardPage() {
         averageInterestRate: 0,
         overallProgressPercentage: 0,
         nextActionMessage: "Add your first loan to see next actions.",
+        highestInterestLoan: null,
+        lowestInterestLoan: null,
       };
     }
 
@@ -149,6 +163,8 @@ export default function DashboardPage() {
       averageInterestRate: parseFloat(averageInterestRate.toFixed(2)),
       overallProgressPercentage: parseFloat(overallProgressPercentage.toFixed(2)),
       nextActionMessage,
+      highestInterestLoan,
+      lowestInterestLoan,
     };
   }, [loanSummaries]);
 
@@ -192,7 +208,7 @@ export default function DashboardPage() {
         {/* User Profile Card */}
         <Card className="lg:col-span-1 shadow-lg bg-card flex flex-col items-center p-6 rounded-xl">
           <Avatar className="w-24 h-24 mb-3 ring-2 ring-primary/50 ring-offset-2 ring-offset-card">
-            <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} data-ai-hint="profile person" />
+            <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} />
             <AvatarFallback className="text-3xl bg-muted">
               {user?.displayName ? getInitials(user.displayName) : (user?.email ? user.email.substring(0,2).toUpperCase() : <UserIcon />)}
             </AvatarFallback>
@@ -257,8 +273,48 @@ export default function DashboardPage() {
         </div>
       </div>
       
+      {/* Loan Insights Section */}
+      {loanSummaries.length > 0 && (dashboardStats.highestInterestLoan || dashboardStats.lowestInterestLoan) && (
+        <div className="mt-8">
+          <h2 className="text-xl font-headline tracking-tight mb-4">Loan Insights</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {dashboardStats.highestInterestLoan && (
+              <Card className="shadow-md rounded-xl">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                    <Flame className="mr-2 h-4 w-4 text-destructive" /> Highest Interest Loan
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-lg font-semibold">{dashboardStats.highestInterestLoan.name}</p>
+                  <p className="text-2xl font-bold text-destructive">{dashboardStats.highestInterestLoan.interestRate}% <span className="text-sm font-normal text-muted-foreground">APR</span></p>
+                  <p className="text-xs text-muted-foreground mt-1">Consider prepaying this loan to save more on interest.</p>
+                </CardContent>
+              </Card>
+            )}
+            {dashboardStats.lowestInterestLoan && (
+              <Card className="shadow-md rounded-xl">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                    <ShieldCheck className="mr-2 h-4 w-4 text-green-600" /> Lowest Interest Loan
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-lg font-semibold">{dashboardStats.lowestInterestLoan.name}</p>
+                  <p className="text-2xl font-bold text-green-600">{dashboardStats.lowestInterestLoan.interestRate}% <span className="text-sm font-normal text-muted-foreground">APR</span></p>
+                   <p className="text-xs text-muted-foreground mt-1">This loan has the most favorable interest rate among your active loans.</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+           {(dashboardStats.highestInterestLoan && dashboardStats.highestInterestLoan.id === dashboardStats.lowestInterestLoan?.id) && (
+              <p className="text-xs text-center text-muted-foreground mt-2">You have only one active loan, so it's listed as both highest and lowest interest.</p>
+            )}
+        </div>
+      )}
+
       {loanSummaries.length === 0 && !isLoading && (
-        <Card className="w-full shadow-lg">
+        <Card className="w-full shadow-lg mt-8">
           <CardHeader>
             <CardTitle className="font-headline text-2xl">
               Get Started with LoanPilot
@@ -325,3 +381,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

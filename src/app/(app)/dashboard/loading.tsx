@@ -1,6 +1,6 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity } from 'lucide-react';
+import { PlusCircle, User as UserIcon, TrendingDown, TrendingUp as TrendingUpIcon, Percent, ListChecks, Activity, Flame, ShieldCheck } from 'lucide-react';
 
 export default function DashboardLoading() {
   return (
@@ -47,6 +47,26 @@ export default function DashboardLoading() {
         </div>
       </div>
       
+      {/* Loan Insights Skeleton */}
+      <div className="mt-8">
+        <Skeleton className="h-7 w-40 mb-4 rounded" /> {/* Loan Insights Title */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[1, 2].map((item) => (
+            <div key={item} className="shadow-md rounded-xl bg-card p-4">
+              <div className="flex items-center justify-between mb-2">
+                <Skeleton className="h-5 w-32 rounded" /> {/* Insight Card Title */}
+                {item === 1 && <Flame className="h-4 w-4 text-muted-foreground" />}
+                {item === 2 && <ShieldCheck className="h-4 w-4 text-muted-foreground" />}
+              </div>
+              <Skeleton className="h-6 w-4/5 mb-1 rounded" /> {/* Loan Name */}
+              <Skeleton className="h-8 w-1/2 mb-2 rounded" /> {/* Interest Rate */}
+              <Skeleton className="h-3 w-full rounded" /> {/* Description line */}
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Active Loans List Skeleton */}
       <div>
         <Skeleton className="h-8 w-48 mt-10 mb-6 rounded" />
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -76,3 +96,4 @@ export default function DashboardLoading() {
     </div>
   );
 }
+
