@@ -55,23 +55,23 @@
   }
 
   .dark {
-    /* Donezo Dark Theme Inspired - Adapting from light theme */
-    --background: 220 15% 12%; /* Dark Blue/Grey Background */
+    /* Pitch Black Dark Theme */
+    --background: 0 0% 0%; /* Black Background */
     --foreground: 220 10% 85%; /* Light Grey/Off-white Text */
 
-    --card: 220 15% 18%; /* Slightly Lighter Dark Blue/Grey for cards */
+    --card: 0 0% 5%; /* Very Dark Grey for cards (near black) */
     --card-foreground: 220 10% 85%; /* Light Grey/Off-white Text */
 
-    --popover: 220 15% 15%; /* Dark Popover */
+    --popover: 0 0% 4%; /* Very Dark Grey for popovers (near black) */
     --popover-foreground: 220 10% 85%;
 
     --primary: 145 55% 55%; /* Primary Green (slightly brighter for dark mode) */
-    --primary-foreground: 220 15% 10%; /* Dark text for contrast */
+    --primary-foreground: 0 0% 10%; /* Dark text for contrast on primary */
 
     --secondary: 145 45% 40%; /* Muted Green/Teal for secondary */
     --secondary-foreground: 220 10% 85%;
 
-    --muted: 220 15% 22%; /* Darker Muted Background */
+    --muted: 0 0% 10%; /* Darker Muted Background */
     --muted-foreground: 220 10% 65%; /* Muted Grey Text */
 
     --accent: 145 50% 50%; /* Accent Green */
@@ -80,8 +80,8 @@
     --destructive: 0 60% 50%; /* Red */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 25%; /* Dark Border */
-    --input: 220 15% 20%; /* Dark Input Background */
+    --border: 0 0% 15%; /* Dark Border, slightly lighter than card */
+    --input: 0 0% 8%; /* Dark Input Background */
     --ring: 145 55% 55%; /* Primary Green for focus rings */
 
     --chart-1: 145 55% 55%;
@@ -90,14 +90,14 @@
     --chart-4: 145 35% 80%;
     --chart-5: 145 50% 60%;
     
-    /* Sidebar Specific Colors - Donezo dark theme */
-    --sidebar-background: 220 15% 15%; /* Dark background for sidebar */
+    /* Sidebar Specific Colors - Pitch Black theme */
+    --sidebar-background: 0 0% 3%; /* Very Dark Grey for sidebar */
     --sidebar-foreground: 220 10% 80%; /* Light grey text */
     --sidebar-primary: 145 55% 55%; /* Primary Green for active/hover */
-    --sidebar-primary-foreground: 220 15% 10%; /* Dark text on primary green */
-    --sidebar-accent: 220 15% 25%; /* Darker accent for hover backgrounds */
+    --sidebar-primary-foreground: 0 0% 10%; /* Dark text on primary green */
+    --sidebar-accent: 0 0% 12%; /* Darker accent for hover backgrounds */
     --sidebar-accent-foreground: 145 55% 70%; /* Lighter Green text on accent hover */
-    --sidebar-border: 220 15% 30%; /* Darker grey border */
+    --sidebar-border: 0 0% 15%; /* Darker grey border */
     --sidebar-ring: 145 55% 55%;
   }
 }
