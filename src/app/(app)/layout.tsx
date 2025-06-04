@@ -71,6 +71,7 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // All hooks are called unconditionally at the top
   const { user, loading, signOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
@@ -129,7 +130,28 @@ export default function AppLayout({
     };
   }, []);
 
+  useEffect(() => {
+    if (activeSuggestionIndex >= 0 && suggestionsContainerRef.current) {
+      const selectedItem = suggestionsContainerRef.current.children[activeSuggestionIndex] as HTMLElement;
+      selectedItem?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [activeSuggestionIndex]);
 
+  useEffect(() => {
+    if (justSearchedRef.current) {
+      justSearchedRef.current = false; 
+      return;
+    }
+
+    if (pathname === '/loans') {
+      setSearchTerm(searchParams.get('search') || '');
+    } else {
+      setSearchTerm('');
+    }
+  }, [pathname, searchParams]);
+
+
+  // Conditional rendering logic now happens after all hooks are called
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -235,27 +257,6 @@ export default function AppLayout({
     }
   };
   
-  useEffect(() => {
-    if (activeSuggestionIndex >= 0 && suggestionsContainerRef.current) {
-      const selectedItem = suggestionsContainerRef.current.children[activeSuggestionIndex] as HTMLElement;
-      selectedItem?.scrollIntoView({ block: 'nearest' });
-    }
-  }, [activeSuggestionIndex]);
-
-  useEffect(() => {
-    if (justSearchedRef.current) {
-      justSearchedRef.current = false; 
-      return;
-    }
-
-    if (pathname === '/loans') {
-      setSearchTerm(searchParams.get('search') || '');
-    } else {
-      setSearchTerm('');
-    }
-  }, [pathname, searchParams]);
-
-
   return (
     <SidebarProvider defaultOpen>
       <Sidebar side="left" variant="sidebar" collapsible="icon">
@@ -423,4 +424,3 @@ export default function AppLayout({
     </SidebarProvider>
   );
 }
-
