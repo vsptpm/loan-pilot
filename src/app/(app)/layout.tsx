@@ -46,7 +46,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, useMemo, useRef, Suspense } from 'react'; // Added Suspense
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Loan } from '@/types';
@@ -69,7 +69,7 @@ const generalItems = [
 
 function PageLoadingFallback() {
   return (
-    <div className="flex items-center justify-center h-[calc(100vh-12rem)]"> {/* Adjusted height */}
+    <div className="flex items-center justify-center h-[calc(100vh-4rem)] w-full"> {/* Adjusted height & width */}
       <Loader2 className="h-8 w-8 animate-spin text-primary" />
       <p className="ml-3 text-muted-foreground">Loading content...</p>
     </div>
@@ -86,7 +86,7 @@ export default function AppLayout({
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams(); // This hook needs Suspense
+  const searchParams = useSearchParams(); 
   const [searchTerm, setSearchTerm] = useState('');
 
   const [allLoansForSuggestions, setAllLoansForSuggestions] = useState<Pick<Loan, 'id' | 'name'>[]>([]);
@@ -195,10 +195,9 @@ export default function AppLayout({
 
   const getInitials = (nameOrEmail?: string | null) => {
     if (!nameOrEmail) return 'U';
-    if (nameOrEmail.includes('@') && nameOrEmail.split(' ').length === 1) { // Check if it's likely an email
+    if (nameOrEmail.includes('@') && nameOrEmail.split(' ').length === 1) { 
       return nameOrEmail.substring(0, 2).toUpperCase();
     }
-    // Assume it's a name
     const names = nameOrEmail.split(' ');
     if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
     return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
@@ -320,124 +319,123 @@ export default function AppLayout({
           </SidebarGroup>
         </SidebarContent>
       </Sidebar>
-      <SidebarInset>
-        <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container flex h-16 items-center gap-x-4 px-4 md:px-8">
-            
-            <SidebarTrigger className="md:hidden flex-shrink-0" />
+      <Suspense fallback={<PageLoadingFallback />}>
+        <SidebarInset>
+          <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container flex h-16 items-center gap-x-4 px-4 md:px-8">
+              
+              <SidebarTrigger className="md:hidden flex-shrink-0" />
 
-            <div className="relative flex-grow">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  ref={searchInputRef}
-                  placeholder="Search loans by name..."
-                  className="pl-10 pr-4 h-10 w-full"
-                  value={searchTerm}
-                  onChange={handleSearchInputChange}
-                  onKeyDown={handleSearchKeyDown}
-                  onFocus={handleSearchFocus}
-                  aria-autocomplete="list"
-                  aria-expanded={showSuggestions && filteredSuggestions.length > 0}
-                  aria-controls="suggestions-listbox"
-                  aria-activedescendant={activeSuggestionIndex >= 0 ? `suggestion-${activeSuggestionIndex}` : undefined}
-                />
-                <kbd className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden h-6 select-none items-center gap-1 rounded border bg-muted px-2 font-mono text-[10px] font-medium text-muted-foreground opacity-100 sm:flex">
-                  <span className="text-xs">⌘</span>F
-                </kbd>
+              <div className="relative flex-grow">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    ref={searchInputRef}
+                    placeholder="Search loans by name..."
+                    className="pl-10 pr-4 h-10 w-full"
+                    value={searchTerm}
+                    onChange={handleSearchInputChange}
+                    onKeyDown={handleSearchKeyDown}
+                    onFocus={handleSearchFocus}
+                    aria-autocomplete="list"
+                    aria-expanded={showSuggestions && filteredSuggestions.length > 0}
+                    aria-controls="suggestions-listbox"
+                    aria-activedescendant={activeSuggestionIndex >= 0 ? `suggestion-${activeSuggestionIndex}` : undefined}
+                  />
+                  <kbd className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden h-6 select-none items-center gap-1 rounded border bg-muted px-2 font-mono text-[10px] font-medium text-muted-foreground opacity-100 sm:flex">
+                    <span className="text-xs">⌘</span>F
+                  </kbd>
+                </div>
+
+                {showSuggestions && filteredSuggestions.length > 0 && (
+                  <ul
+                    ref={suggestionsContainerRef}
+                    id="suggestions-listbox"
+                    className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-lg max-h-60 overflow-y-auto"
+                    role="listbox"
+                  >
+                    {filteredSuggestions.map((suggestion, index) => (
+                      <li
+                        key={suggestion.id}
+                        id={`suggestion-${index}`}
+                        role="option"
+                        aria-selected={index === activeSuggestionIndex}
+                        className={cn(
+                          "px-3 py-2 text-sm cursor-pointer hover:bg-accent focus:bg-accent outline-none",
+                          index === activeSuggestionIndex && "bg-accent"
+                        )}
+                        onMouseDown={() => handleSuggestionClick(suggestion.name)} 
+                        onMouseEnter={() => setActiveSuggestionIndex(index)}
+                      >
+                        {suggestion.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-
-              {showSuggestions && filteredSuggestions.length > 0 && (
-                <ul
-                  ref={suggestionsContainerRef}
-                  id="suggestions-listbox"
-                  className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-lg max-h-60 overflow-y-auto"
-                  role="listbox"
-                >
-                  {filteredSuggestions.map((suggestion, index) => (
-                    <li
-                      key={suggestion.id}
-                      id={`suggestion-${index}`}
-                      role="option"
-                      aria-selected={index === activeSuggestionIndex}
-                      className={cn(
-                        "px-3 py-2 text-sm cursor-pointer hover:bg-accent focus:bg-accent outline-none",
-                        index === activeSuggestionIndex && "bg-accent"
-                      )}
-                      onMouseDown={() => handleSuggestionClick(suggestion.name)} 
-                      onMouseEnter={() => setActiveSuggestionIndex(index)}
-                    >
-                      {suggestion.name}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <ThemeToggle />
-              <AlertDialog>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} />
-                        <AvatarFallback>{getInitials(user?.displayName || user?.email)}</AvatarFallback>
-                      </Avatar>
-                       <span className="sr-only">Open user menu</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-4" align="end">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} />
-                        <AvatarFallback className="text-xl bg-muted">{getInitials(user?.displayName || user?.email)}</AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold text-foreground">
-                          {user?.displayName || user?.email?.split('@')[0]}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{user?.email}</p>
+              
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <ThemeToggle />
+                <AlertDialog>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+                        <Avatar className="h-9 w-9">
+                          <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} />
+                          <AvatarFallback>{getInitials(user?.displayName || user?.email)}</AvatarFallback>
+                        </Avatar>
+                        <span className="sr-only">Open user menu</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-4" align="end">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} />
+                          <AvatarFallback className="text-xl bg-muted">{getInitials(user?.displayName || user?.email)}</AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-foreground">
+                            {user?.displayName || user?.email?.split('@')[0]}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{user?.email}</p>
+                        </div>
                       </div>
-                    </div>
-                    <Separator className="my-3" />
-                    <Link href="/settings" legacyBehavior passHref>
-                       <Button variant="ghost" className="w-full justify-start text-sm h-auto py-1.5 px-2">
-                          <Settings className="mr-2 h-4 w-4" /> Account Settings
-                       </Button>
-                    </Link>
-                    <AlertDialogTrigger asChild>
-                     <Button variant="ghost" className="w-full justify-start text-sm text-destructive hover:text-destructive hover:bg-destructive/10 h-auto py-1.5 px-2">
-                          <LogOut className="mr-2 h-4 w-4" /> Logout
-                     </Button>
-                    </AlertDialogTrigger>
-                  </PopoverContent>
-                </Popover>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to log out of LoanPilot?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={signOut} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                      Logout
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                      <Separator className="my-3" />
+                      <Link href="/settings" legacyBehavior passHref>
+                        <Button variant="ghost" className="w-full justify-start text-sm h-auto py-1.5 px-2">
+                            <Settings className="mr-2 h-4 w-4" /> Account Settings
+                        </Button>
+                      </Link>
+                      <AlertDialogTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-start text-sm text-destructive hover:text-destructive hover:bg-destructive/10 h-auto py-1.5 px-2">
+                            <LogOut className="mr-2 h-4 w-4" /> Logout
+                      </Button>
+                      </AlertDialogTrigger>
+                    </PopoverContent>
+                  </Popover>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to log out of LoanPilot?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={signOut} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                        Logout
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </div>
-          </div>
-        </header>
-        <main className="flex-1 p-4 md:p-8">
-          <Suspense fallback={<PageLoadingFallback />}>
+          </header>
+          <main className="flex-1 p-4 md:p-8">
             {children}
-          </Suspense>
-        </main>
-      </SidebarInset>
+          </main>
+        </SidebarInset>
+      </Suspense>
     </SidebarProvider>
   );
 }
-
