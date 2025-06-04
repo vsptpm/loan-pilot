@@ -203,7 +203,7 @@ export default function LoansPage() {
                     </CardTitle>
                     <div className="flex items-center flex-shrink-0">
                       <span className="text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary mr-2 whitespace-nowrap">
-                        {loanSummary.interestRate}% APR
+                        {loanSummary.interestRate}%
                       </span>
                       <AlertDialog>
                         <DropdownMenu>

@@ -299,7 +299,7 @@ export default function DashboardPage() {
                     <div className="flex justify-between items-start">
                       <CardTitle className="font-headline text-xl">{summary.name}</CardTitle>
                       <span className="text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary">
-                        {summary.interestRate}% APR
+                        {summary.interestRate}%
                       </span>
                     </div>
                     <CardDescription>
