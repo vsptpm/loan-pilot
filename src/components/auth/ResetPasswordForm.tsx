@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -72,3 +73,7 @@ export function ResetPasswordForm() {
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Send Reset Link
         </Button>
+      </form>
+    </Form>
+  );
+}
